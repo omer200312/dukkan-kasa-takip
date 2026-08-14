@@ -7,6 +7,7 @@ React, Tailwind CSS ve Supabase ile hazırlanmış; masaüstü ve mobil cihazlar
 - Nakit, POS / Kart, POS %1 ve Yemek Kartı / Online gelir takibi
 - Kalem kalem gider girişi
 - Aylık kontrol paneli ve yıllık rapor
+- Gelen ve giden faturalar için aylık KDV hesaplama, ödenecek/devreden KDV sonucu
 - Supabase ile tüm kullanıcılarda ortak, anlık güncellenen veriler
 - CSV dışa aktarma, JSON yedekleme ve yedekten geri yükleme
 - Mobil cihazlarda kart görünümü ve alt menü
