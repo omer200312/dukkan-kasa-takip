@@ -377,7 +377,7 @@ function PrintCenter({ records, notify }) {
     window.scrollTo({ top: 0, behavior: 'instant' })
   }
 
-  return <div className={documentMode ? 'fixed inset-0 z-[100] overflow-y-auto bg-slate-200' : ''}>
+  return <div className={documentMode ? 'print-document-mode fixed inset-0 z-[100] overflow-y-auto bg-slate-200' : ''}>
     {documentMode && <div className="no-print sticky top-0 z-10 flex flex-col gap-3 bg-slate-950 px-4 py-3 text-white shadow-xl sm:flex-row sm:items-center sm:justify-between sm:px-6"><div><strong className="block">Belge önizleme</strong><small className="text-slate-400">{title} • {period}</small></div><div className="flex gap-2"><button onClick={() => setDocumentMode(false)} className="btn-secondary flex-1 border-slate-700 bg-slate-900 text-white sm:flex-none"><X size={18} /> Geri Dön</button><button onClick={() => window.print()} className="btn-primary flex-1 sm:flex-none"><Printer size={18} /> Yazdır / PDF Kaydet</button></div></div>}
     {!documentMode && <div className="no-print">
       <PageHeading eyebrow="PDF VE YAZDIRMA" title="Çıktı merkezi" description="Raporunuzu seçin, önizleyin ve yazdırma ekranından PDF olarak kaydedin veya kâğıda çıktı alın." />

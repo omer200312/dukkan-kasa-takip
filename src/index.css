@@ -43,14 +43,21 @@
   body,
   #root { background: #fff !important; }
 
+  main {
+    min-height: 0 !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
   body * { visibility: hidden !important; }
 
   .print-sheet,
   .print-sheet * { visibility: visible !important; }
 
   .print-sheet {
-    position: absolute !important;
-    inset: 0 auto auto 0 !important;
+    position: static !important;
+    inset: auto !important;
     width: 100% !important;
     min-width: 0 !important;
     max-width: none !important;
@@ -60,6 +67,17 @@
     box-shadow: none !important;
     overflow: visible !important;
     color: #0f172a !important;
+    break-after: auto !important;
+    page-break-after: auto !important;
+  }
+
+  .print-document-mode {
+    position: static !important;
+    inset: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: #fff !important;
   }
 
   .print-sheet table { page-break-inside: auto; }
