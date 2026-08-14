@@ -3,7 +3,7 @@ import {
   ArrowDownRight, ArrowUpRight, Banknote, BarChart3, CalendarDays, CheckCircle2,
   ChevronRight, CircleUserRound, Cloud, CreditCard, Download, FileUp, LayoutDashboard,
   LoaderCircle, LogOut, Menu, Plus, ReceiptText, Search, ShieldCheck, ShoppingBag,
-  Smartphone, Trash2, TrendingUp, WalletCards, X,
+  Smartphone, Trash2, TrendingUp, WalletCards, X, Calculator, Percent, Building2,
 } from 'lucide-react'
 import { supabase } from './supabase.js'
 
@@ -142,6 +142,7 @@ function App() {
         {page === 'dashboard' && <Dashboard records={records} go={go} />}
         {page === 'transactions' && <Transactions records={records} loading={loading} setLoading={setLoading} reload={loadRecords} notify={notify} />}
         {page === 'reports' && <Reports records={records} loading={loading} setLoading={setLoading} reload={loadRecords} notify={notify} />}
+        {page === 'vat' && <VatCalculator loading={loading} setLoading={setLoading} notify={notify} />}
       </main>
       <BottomNav page={page} go={go} />
       {loading && <div className="fixed inset-0 z-[70] grid place-items-center bg-slate-950/15 backdrop-blur-[1px]"><div className="flex items-center gap-3 rounded-2xl bg-white px-5 py-4 font-semibold shadow-2xl"><LoaderCircle className="animate-spin text-emerald-500" /> İşlem yapılıyor...</div></div>}
@@ -204,6 +205,7 @@ const navItems = [
   { id: 'dashboard', label: 'Ana Menü', icon: LayoutDashboard },
   { id: 'transactions', label: 'Günlük İşlemler', icon: ReceiptText },
   { id: 'reports', label: 'Aylık Rapor', icon: BarChart3 },
+  { id: 'vat', label: 'KDV Hesaplama', icon: Calculator },
 ]
 
 function Sidebar({ page, go, username }) {
@@ -213,7 +215,7 @@ function Sidebar({ page, go, username }) {
 function NavButton({ item, active, onClick }) { const Icon = item.icon; return <button onClick={onClick} className={`flex w-full items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold transition ${active ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'text-slate-400 hover:bg-slate-900 hover:text-white'}`}><Icon size={20} />{item.label}</button> }
 function MobileHeader({ onMenu, username }) { return <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200/80 bg-white/90 px-4 backdrop-blur lg:hidden"><Brand /><button onClick={onMenu} aria-label="Menüyü aç" className="grid size-11 place-items-center rounded-xl bg-slate-100 text-slate-700"><Menu /></button><span className="sr-only">{username}</span></header> }
 function MobileDrawer({ page, go, close, username }) { return <div className="fixed inset-0 z-50 lg:hidden"><button aria-label="Menüyü kapat" onClick={close} className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm" /><aside className="absolute inset-y-0 right-0 w-[min(86vw,340px)] bg-slate-950 p-5 text-white shadow-2xl"><div className="flex items-center justify-between"><Brand light /><button onClick={close} className="grid size-10 place-items-center rounded-xl bg-slate-800"><X /></button></div><nav className="mt-9 space-y-2">{navItems.map(item => <NavButton key={item.id} item={item} active={page === item.id} onClick={() => go(item.id)} />)}</nav><div className="absolute bottom-6 left-5 right-5"><p className="mb-3 text-sm text-slate-400">Giriş yapan: <strong className="text-white">{username}</strong></p><button onClick={() => confirm('Oturumu kapatmak istiyor musunuz?') && supabase.auth.signOut()} className="btn-secondary w-full border-slate-700 bg-slate-900 text-slate-200"><LogOut size={17} /> Çıkış yap</button></div></aside></div> }
-function BottomNav({ page, go }) { return <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-3 border-t border-slate-200 bg-white/95 px-2 pb-[max(.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-10px_30px_rgba(15,23,42,.06)] backdrop-blur lg:hidden">{navItems.map(item => { const Icon = item.icon; const active = page === item.id; return <button key={item.id} onClick={() => go(item.id)} className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-[11px] font-bold ${active ? 'bg-emerald-50 text-emerald-600' : 'text-slate-400'}`}><Icon size={21} />{item.id === 'transactions' ? 'İşlemler' : item.label}</button> })}</nav> }
+function BottomNav({ page, go }) { return <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-slate-200 bg-white/95 px-1 pb-[max(.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-10px_30px_rgba(15,23,42,.06)] backdrop-blur lg:hidden">{navItems.map(item => { const Icon = item.icon; const active = page === item.id; const shortLabel = item.id === 'transactions' ? 'İşlemler' : item.id === 'reports' ? 'Rapor' : item.id === 'vat' ? 'KDV' : item.label; return <button key={item.id} onClick={() => go(item.id)} className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-bold sm:text-[11px] ${active ? 'bg-emerald-50 text-emerald-600' : 'text-slate-400'}`}><Icon size={20} />{shortLabel}</button> })}</nav> }
 
 function PageHeading({ eyebrow, title, description, children }) { return <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="eyebrow">{eyebrow}</p><h1 className="mt-1.5 text-2xl font-extrabold tracking-tight text-slate-950 sm:text-3xl">{title}</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">{description}</p></div>{children}</div> }
 function Field({ label, children, className = '' }) { return <label className={className}><span className="field-label">{label}</span>{children}</label> }
@@ -330,6 +332,99 @@ function Reports({ records, loading, setLoading, reload, notify }) {
     <section className="mt-5 flex flex-col gap-5 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 p-5 text-white shadow-xl sm:flex-row sm:items-center sm:justify-between sm:p-7"><div className="flex gap-4"><div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-emerald-400/15 text-emerald-400"><Cloud /></div><div><h2 className="font-extrabold">Çevrim içi ve güvende</h2><p className="mt-1 max-w-2xl text-sm leading-6 text-slate-400">Kayıtlar Supabase üzerinde tutulur ve tüm cihazlarda ortak görünür. Ek olarak JSON yedeği alabilirsiniz.</p></div></div><div className="flex shrink-0 flex-col gap-2 sm:flex-row"><button disabled={loading} onClick={() => restoreInput.current?.click()} className="btn-secondary border-slate-600 bg-slate-800 text-white hover:bg-slate-700"><FileUp size={17} /> Yedekten yükle</button><button onClick={backup} className="btn-primary"><Download size={17} /> JSON yedeği indir</button><input ref={restoreInput} onChange={restore} type="file" accept="application/json" hidden /></div></section>
   </>
 }
+
+function VatCalculator({ loading, setLoading, notify }) {
+  const emptyForm = { invoiceDate: localDate(), invoiceType: 'sale', invoiceNo: '', companyName: '', description: '', baseAmount: '', vatRate: '20', note: '' }
+  const [invoices, setInvoices] = useState([])
+  const [form, setForm] = useState(emptyForm)
+  const [year, setYear] = useState(currentYear)
+  const [month, setMonth] = useState(currentMonth)
+  const [search, setSearch] = useState('')
+  const set = (key, value) => setForm(previous => ({ ...previous, [key]: value }))
+  const loadInvoices = useCallback(async () => {
+    const { data, error } = await supabase.from('vat_invoices').select('*').order('invoice_date', { ascending: false }).order('created_at', { ascending: false })
+    if (error) throw error
+    setInvoices((data || []).map(row => ({ ...row, base_amount: Number(row.base_amount) || 0, vat_rate: Number(row.vat_rate) || 0, vat_amount: Number(row.vat_amount) || 0, total_amount: Number(row.total_amount) || 0 })))
+  }, [])
+
+  useEffect(() => {
+    loadInvoices().catch(error => { console.error(error); notify('KDV kayıtları yüklenemedi.') })
+    const channel = supabase.channel('ortak-kdv-react').on('postgres_changes', { event: '*', schema: 'public', table: 'vat_invoices' }, () => loadInvoices().catch(console.error)).subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [loadInvoices, notify])
+
+  const periodInvoices = useMemo(() => invoices.filter(item => {
+    const [itemYear, itemMonth] = item.invoice_date.split('-').map(Number)
+    return itemYear === Number(year) && itemMonth === Number(month)
+  }), [invoices, year, month])
+  const calculatedVat = periodInvoices.filter(item => item.invoice_type === 'sale').reduce((sum, item) => sum + item.vat_amount, 0)
+  const deductibleVat = periodInvoices.filter(item => item.invoice_type === 'purchase').reduce((sum, item) => sum + item.vat_amount, 0)
+  const vatBalance = calculatedVat - deductibleVat
+  const baseAmount = Number(form.baseAmount) || 0
+  const vatRate = Number(form.vatRate) || 0
+  const previewVat = Math.round(baseAmount * vatRate) / 100
+  const previewTotal = baseAmount + previewVat
+  const visibleInvoices = useMemo(() => periodInvoices.filter(item => !search || [item.company_name, item.invoice_no, item.description, item.note].join(' ').toLocaleLowerCase('tr').includes(search.toLocaleLowerCase('tr'))), [periodInvoices, search])
+
+  const submit = async event => {
+    event.preventDefault()
+    if (baseAmount <= 0) return notify('Fatura matrahını girin.')
+    if (vatRate < 0 || vatRate > 100) return notify('KDV oranı 0 ile 100 arasında olmalı.')
+    setLoading(true)
+    try {
+      const { error } = await supabase.from('vat_invoices').insert({
+        invoice_date: form.invoiceDate, invoice_type: form.invoiceType, invoice_no: form.invoiceNo.trim().slice(0, 80),
+        company_name: form.companyName.trim().slice(0, 100), description: form.description.trim().slice(0, 120),
+        base_amount: baseAmount, vat_rate: vatRate, note: form.note.trim().slice(0, 160),
+      })
+      if (error) throw error
+      setForm({ ...emptyForm, invoiceDate: form.invoiceDate, invoiceType: form.invoiceType })
+      await loadInvoices(); notify('KDV faturası ortak kayıtlara eklendi.')
+    } catch (error) { console.error(error); notify('KDV kaydı eklenemedi.') } finally { setLoading(false) }
+  }
+  const remove = async id => {
+    if (!confirm('Bu KDV faturasını silmek istediğinize emin misiniz?')) return
+    setLoading(true)
+    try { const { error } = await supabase.from('vat_invoices').delete().eq('id', id); if (error) throw error; await loadInvoices(); notify('KDV kaydı silindi.') }
+    catch (error) { console.error(error); notify('KDV kaydı silinemedi.') } finally { setLoading(false) }
+  }
+
+  return <>
+    <PageHeading eyebrow="KDV TAKİBİ" title="KDV hesaplama" description="Satış faturalarındaki hesaplanan KDV ile alış faturalarındaki indirilecek KDV'yi aylık olarak karşılaştırın.">
+      <div className="grid grid-cols-2 gap-2"><select aria-label="KDV yılı" className="field w-28" value={year} onChange={e => setYear(e.target.value)}>{[currentYear - 2, currentYear - 1, currentYear, currentYear + 1].map(value => <option key={value}>{value}</option>)}</select><select aria-label="KDV ayı" className="field w-32" value={month} onChange={e => setMonth(e.target.value)}>{MONTHS.map((name, index) => <option value={index + 1} key={name}>{name}</option>)}</select></div>
+    </PageHeading>
+
+    <div className="grid gap-3 sm:grid-cols-3">
+      <Kpi title="Hesaplanan KDV" value={money(calculatedVat)} note="Satış faturaları" icon={ArrowUpRight} tone="emerald" />
+      <Kpi title="İndirilecek KDV" value={money(deductibleVat)} note="Alış / gider faturaları" icon={ArrowDownRight} tone="violet" />
+      <Kpi title={vatBalance >= 0 ? 'Ödenecek KDV' : 'Devreden KDV'} value={money(Math.abs(vatBalance))} note={vatBalance >= 0 ? 'Hesaplanan eksi indirilecek' : 'Sonraki aya devreden tutar'} icon={Calculator} tone={vatBalance >= 0 ? 'red' : 'blue'} />
+    </div>
+
+    <form onSubmit={submit} className="panel mt-5 overflow-hidden">
+      <div className="border-b border-slate-100 p-5 sm:p-6"><PanelTitle eyebrow="YENİ FATURA" title="KDV kaydı ekle" /></div>
+      <div className="grid gap-4 p-5 sm:grid-cols-2 sm:p-6 xl:grid-cols-4">
+        <Field label="Fatura türü"><select className="field" value={form.invoiceType} onChange={e => set('invoiceType', e.target.value)}><option value="sale">Satış / Giden fatura</option><option value="purchase">Alış / Gelen fatura</option></select></Field>
+        <Field label="Fatura tarihi"><input className="field" type="date" required value={form.invoiceDate} onChange={e => set('invoiceDate', e.target.value)} /></Field>
+        <Field label="Firma / Müşteri"><div className="relative"><Building2 className="absolute left-3.5 top-3.5 text-slate-400" size={19} /><input className="field pl-11" value={form.companyName} onChange={e => set('companyName', e.target.value)} maxLength="100" placeholder="Firma adı" /></div></Field>
+        <Field label="Fatura no"><input className="field" value={form.invoiceNo} onChange={e => set('invoiceNo', e.target.value)} maxLength="80" placeholder="Örn. GIB2026001" /></Field>
+        <Field label="KDV hariç tutar (matrah)"><div className="relative"><Banknote className="absolute left-3.5 top-3.5 text-slate-400" size={19} /><input className="field pl-11" type="number" inputMode="decimal" min="0" step="0.01" required value={form.baseAmount} onChange={e => set('baseAmount', e.target.value)} placeholder="0,00" /></div></Field>
+        <Field label="KDV oranı (%)"><div className="relative"><Percent className="absolute left-3.5 top-3.5 text-slate-400" size={19} /><input className="field pl-11" type="number" inputMode="decimal" min="0" max="100" step="0.01" required value={form.vatRate} onChange={e => set('vatRate', e.target.value)} list="vat-rates" /><datalist id="vat-rates"><option value="0" /><option value="1" /><option value="10" /><option value="20" /></datalist></div></Field>
+        <Field label="Açıklama"><input className="field" value={form.description} onChange={e => set('description', e.target.value)} maxLength="120" placeholder="Mal / hizmet açıklaması" /></Field>
+        <Field label="Not"><input className="field" value={form.note} onChange={e => set('note', e.target.value)} maxLength="160" placeholder="İsteğe bağlı" /></Field>
+      </div>
+      <div className="flex flex-col gap-4 border-t border-slate-100 bg-slate-50/80 p-5 sm:flex-row sm:items-center sm:justify-between sm:px-6"><div className="grid grid-cols-3 gap-6"><span><small className="block text-xs text-slate-400">Matrah</small><strong>{money(baseAmount)}</strong></span><span><small className="block text-xs text-slate-400">KDV</small><strong className="text-violet-600">{money(previewVat)}</strong></span><span><small className="block text-xs text-slate-400">Fatura toplamı</small><strong className="text-emerald-600">{money(previewTotal)}</strong></span></div><button disabled={loading} className="btn-primary w-full sm:w-auto"><Plus size={19} /> Faturayı Kaydet</button></div>
+    </form>
+
+    <section className="panel mt-5 overflow-hidden"><div className="flex flex-col gap-4 border-b border-slate-100 p-5 sm:flex-row sm:items-end sm:justify-between sm:p-6"><PanelTitle eyebrow="FATURALAR" title={`${MONTHS[Number(month) - 1]} ${year} KDV kayıtları`} /><div className="relative"><Search className="absolute left-3 top-3 text-slate-400" size={18} /><input className="field h-11 pl-10" type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Firma veya faturada ara" /></div></div>
+      <div className="divide-y divide-slate-100 md:hidden">{visibleInvoices.length ? visibleInvoices.map(item => <VatCard key={item.id} item={item} remove={remove} />) : <Empty text="Seçili ayda KDV faturası yok." />}</div>
+      <div className="hidden overflow-x-auto md:block"><table className="w-full min-w-[950px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-400"><tr><Th>Tarih</Th><Th>Tür</Th><Th>Firma / Fatura</Th><Th right>Matrah</Th><Th right>Oran</Th><Th right>KDV</Th><Th right>Toplam</Th><Th /></tr></thead><tbody className="divide-y divide-slate-100">{visibleInvoices.length ? visibleInvoices.map(item => <VatRow key={item.id} item={item} remove={remove} />) : <tr><td colSpan="8"><Empty text="Seçili ayda KDV faturası yok." /></td></tr>}</tbody></table></div>
+    </section>
+  </>
+}
+
+function VatTypeBadge({ type }) { const sale = type === 'sale'; return <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold ${sale ? 'bg-emerald-50 text-emerald-700' : 'bg-violet-50 text-violet-700'}`}>{sale ? 'Satış / Giden' : 'Alış / Gelen'}</span> }
+function VatRow({ item, remove }) { return <tr className="hover:bg-slate-50/70"><td className="whitespace-nowrap px-5 py-4 text-slate-500">{displayDate(item.invoice_date)}</td><td className="px-5 py-4"><VatTypeBadge type={item.invoice_type} /></td><td className="max-w-[240px] px-5 py-4"><strong className="block truncate text-slate-800">{item.company_name || '—'}</strong><small className="block truncate text-slate-400">{item.invoice_no || item.description || '—'}</small></td><td className="px-5 py-4 text-right text-slate-600">{money(item.base_amount)}</td><td className="px-5 py-4 text-right text-slate-500">%{item.vat_rate}</td><td className={`px-5 py-4 text-right font-bold ${item.invoice_type === 'sale' ? 'text-emerald-600' : 'text-violet-600'}`}>{money(item.vat_amount)}</td><td className="px-5 py-4 text-right font-bold text-slate-800">{money(item.total_amount)}</td><td className="px-5 py-4 text-right"><button aria-label="KDV kaydını sil" onClick={() => remove(item.id)} className="rounded-lg p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-500"><Trash2 size={17} /></button></td></tr> }
+function VatCard({ item, remove }) { return <article className="p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><VatTypeBadge type={item.invoice_type} /><strong className="mt-2 block truncate text-sm text-slate-900">{item.company_name || item.description || 'Fatura'}</strong><small className="mt-1 block text-slate-400">{displayDate(item.invoice_date)} {item.invoice_no && `• ${item.invoice_no}`}</small></div><button aria-label="KDV kaydını sil" onClick={() => remove(item.id)} className="rounded-lg bg-slate-50 p-2 text-slate-400"><Trash2 size={17} /></button></div><div className="mt-4 grid grid-cols-3 gap-2 rounded-xl bg-slate-50 p-3 text-center"><span><small className="block text-[10px] uppercase text-slate-400">Matrah</small><strong className="text-xs text-slate-700">{shortMoney(item.base_amount)}</strong></span><span><small className="block text-[10px] uppercase text-slate-400">KDV %{item.vat_rate}</small><strong className={`text-xs ${item.invoice_type === 'sale' ? 'text-emerald-600' : 'text-violet-600'}`}>{shortMoney(item.vat_amount)}</strong></span><span><small className="block text-[10px] uppercase text-slate-400">Toplam</small><strong className="text-xs text-slate-900">{shortMoney(item.total_amount)}</strong></span></div></article> }
 
 function ReportRow({ row: r, total = false }) { const cell = total ? 'px-5 py-4 text-right' : 'px-5 py-3.5 text-right text-slate-600'; return <tr className={total ? '' : 'hover:bg-slate-50'}><td className={`px-5 py-3.5 font-bold ${total ? '' : 'text-slate-800'}`}>{r.name}</td><td className={cell}>{money(r.cash)}</td><td className={cell}>{money(r.pos)}</td><td className={cell}>{money(r.pos1)}</td><td className={cell}>{money(r.online)}</td><td className={`${cell} font-bold ${total ? '' : 'text-emerald-600'}`}>{money(r.revenue)}</td><td className={`${cell} ${total ? '' : 'text-red-500'}`}>{money(r.expense)}</td><td className={`${cell} font-bold ${total ? '' : r.net >= 0 ? 'text-blue-600' : 'text-red-500'}`}>{money(r.net)}</td></tr> }
 
