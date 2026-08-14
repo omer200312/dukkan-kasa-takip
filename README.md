@@ -1,21 +1,31 @@
 # Dükkan Kasa Takip
 
-GitHub Pages üzerinde çalışan, Supabase ile cihazlar arasında ortak günlük gelir-gider takip uygulaması.
+React, Tailwind CSS ve Supabase ile hazırlanmış; masaüstü ve mobil cihazlarda çalışan ortak kasa takip uygulaması.
 
-Gelir kanalları: Nakit, POS / Kart, POS %1 ve Yemek Kartı / Online.
+## Özellikler
 
-## GitHub Pages'ta yayınlama
+- Nakit, POS / Kart, POS %1 ve Yemek Kartı / Online gelir takibi
+- Kalem kalem gider girişi
+- Aylık kontrol paneli ve yıllık rapor
+- Supabase ile tüm kullanıcılarda ortak, anlık güncellenen veriler
+- CSV dışa aktarma, JSON yedekleme ve yedekten geri yükleme
+- Mobil cihazlarda kart görünümü ve alt menü
 
-1. Bu klasördeki `index.html`, `styles.css` ve `app.js` dosyalarını GitHub deponuzun ana dizinine yükleyin.
-2. GitHub deposunda **Settings → Pages** bölümünü açın.
-3. **Deploy from a branch**, ardından `main` ve `/ (root)` seçeneklerini seçip kaydedin.
+## Yerel çalıştırma
 
-Veriler Supabase üzerindeki ortak kasada tutulur. İlk çevrim içi girişte bu tarayıcıda eski yerel kayıtlar varsa Supabase'e aktarılır. Uygulamadaki **Yedekle** düğmesiyle ayrıca JSON yedeği indirilebilir.
+```bash
+pnpm install
+pnpm dev
+```
 
-## Kullanıcı hesabı
+Üretim derlemesi için:
 
-Kullanıcı hesapları Supabase Auth bölümünden yönetilir. Uygulamada kayıt olma özelliği güvenlik amacıyla kapalıdır. Supabase'te oluşturulan tüm kullanıcılar, Row Level Security kuralları kapsamında aynı ortak kasa kayıtlarını görür ve düzenler.
+```bash
+pnpm build
+```
 
-Varsayılan kullanıcı adı `omerfaruk` olarak tanımlanmıştır. Uygulama kullanıcı adını Supabase tarafında `kullaniciadi@dukkan-kasa.local` biçimine dönüştürür.
+## Yayınlama
 
-İlk hazır kullanıcı: `omerfaruk`. Güvenlik için ilk yayımdan sonra başlangıç şifresini değiştirecek çevrimiçi kullanıcı yönetimi eklenmelidir.
+`main` dalına gönderilen her değişiklik GitHub Actions tarafından derlenir ve `dist` klasörü GitHub Pages'a yayınlanır.
+
+Kullanıcı hesapları Supabase Auth bölümünden yönetilir. Uygulama içinden herkese açık kayıt olma özelliği kapalıdır. Giriş yapan bütün kullanıcılar aynı ortak kasa kayıtlarını görür.

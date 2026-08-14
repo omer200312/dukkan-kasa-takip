@@ -1,3 +1,7 @@
 .DS_Store
 Thumbs.db
 *.zip
+node_modules/
+dist/
+.env
+.env.local
