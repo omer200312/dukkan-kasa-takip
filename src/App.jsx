@@ -4,6 +4,7 @@ import {
   ChevronRight, CircleUserRound, Cloud, CreditCard, Download, FileUp, LayoutDashboard,
   LoaderCircle, LogOut, Menu, Plus, ReceiptText, Search, ShieldCheck, ShoppingBag,
   Smartphone, Trash2, TrendingUp, WalletCards, X, Calculator, Percent, Building2,
+  Printer, FileText,
 } from 'lucide-react'
 import { supabase } from './supabase.js'
 
@@ -143,6 +144,7 @@ function App() {
         {page === 'transactions' && <Transactions records={records} loading={loading} setLoading={setLoading} reload={loadRecords} notify={notify} />}
         {page === 'reports' && <Reports records={records} loading={loading} setLoading={setLoading} reload={loadRecords} notify={notify} />}
         {page === 'vat' && <VatCalculator loading={loading} setLoading={setLoading} notify={notify} />}
+        {page === 'print' && <PrintCenter records={records} notify={notify} />}
       </main>
       <BottomNav page={page} go={go} />
       {loading && <div className="fixed inset-0 z-[70] grid place-items-center bg-slate-950/15 backdrop-blur-[1px]"><div className="flex items-center gap-3 rounded-2xl bg-white px-5 py-4 font-semibold shadow-2xl"><LoaderCircle className="animate-spin text-emerald-500" /> İşlem yapılıyor...</div></div>}
@@ -206,6 +208,7 @@ const navItems = [
   { id: 'transactions', label: 'Günlük İşlemler', icon: ReceiptText },
   { id: 'reports', label: 'Aylık Rapor', icon: BarChart3 },
   { id: 'vat', label: 'KDV Hesaplama', icon: Calculator },
+  { id: 'print', label: 'Çıktı Merkezi', icon: Printer },
 ]
 
 function Sidebar({ page, go, username }) {
@@ -215,7 +218,7 @@ function Sidebar({ page, go, username }) {
 function NavButton({ item, active, onClick }) { const Icon = item.icon; return <button onClick={onClick} className={`flex w-full items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold transition ${active ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'text-slate-400 hover:bg-slate-900 hover:text-white'}`}><Icon size={20} />{item.label}</button> }
 function MobileHeader({ onMenu, username }) { return <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200/80 bg-white/90 px-4 backdrop-blur lg:hidden"><Brand /><button onClick={onMenu} aria-label="Menüyü aç" className="grid size-11 place-items-center rounded-xl bg-slate-100 text-slate-700"><Menu /></button><span className="sr-only">{username}</span></header> }
 function MobileDrawer({ page, go, close, username }) { return <div className="fixed inset-0 z-50 lg:hidden"><button aria-label="Menüyü kapat" onClick={close} className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm" /><aside className="absolute inset-y-0 right-0 w-[min(86vw,340px)] bg-slate-950 p-5 text-white shadow-2xl"><div className="flex items-center justify-between"><Brand light /><button onClick={close} className="grid size-10 place-items-center rounded-xl bg-slate-800"><X /></button></div><nav className="mt-9 space-y-2">{navItems.map(item => <NavButton key={item.id} item={item} active={page === item.id} onClick={() => go(item.id)} />)}</nav><div className="absolute bottom-6 left-5 right-5"><p className="mb-3 text-sm text-slate-400">Giriş yapan: <strong className="text-white">{username}</strong></p><button onClick={() => confirm('Oturumu kapatmak istiyor musunuz?') && supabase.auth.signOut()} className="btn-secondary w-full border-slate-700 bg-slate-900 text-slate-200"><LogOut size={17} /> Çıkış yap</button></div></aside></div> }
-function BottomNav({ page, go }) { return <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-slate-200 bg-white/95 px-1 pb-[max(.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-10px_30px_rgba(15,23,42,.06)] backdrop-blur lg:hidden">{navItems.map(item => { const Icon = item.icon; const active = page === item.id; const shortLabel = item.id === 'transactions' ? 'İşlemler' : item.id === 'reports' ? 'Rapor' : item.id === 'vat' ? 'KDV' : item.label; return <button key={item.id} onClick={() => go(item.id)} className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-bold sm:text-[11px] ${active ? 'bg-emerald-50 text-emerald-600' : 'text-slate-400'}`}><Icon size={20} />{shortLabel}</button> })}</nav> }
+function BottomNav({ page, go }) { return <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-slate-200 bg-white/95 px-1 pb-[max(.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-10px_30px_rgba(15,23,42,.06)] backdrop-blur lg:hidden">{navItems.map(item => { const Icon = item.icon; const active = page === item.id; const shortLabel = item.id === 'transactions' ? 'İşlemler' : item.id === 'reports' ? 'Rapor' : item.id === 'vat' ? 'KDV' : item.id === 'print' ? 'Çıktı' : item.label; return <button key={item.id} onClick={() => go(item.id)} className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-[9px] font-bold sm:text-[10px] ${active ? 'bg-emerald-50 text-emerald-600' : 'text-slate-400'}`}><Icon size={19} />{shortLabel}</button> })}</nav> }
 
 function PageHeading({ eyebrow, title, description, children }) { return <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="eyebrow">{eyebrow}</p><h1 className="mt-1.5 text-2xl font-extrabold tracking-tight text-slate-950 sm:text-3xl">{title}</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">{description}</p></div>{children}</div> }
 function Field({ label, children, className = '' }) { return <label className={className}><span className="field-label">{label}</span>{children}</label> }
@@ -332,6 +335,59 @@ function Reports({ records, loading, setLoading, reload, notify }) {
     <section className="mt-5 flex flex-col gap-5 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 p-5 text-white shadow-xl sm:flex-row sm:items-center sm:justify-between sm:p-7"><div className="flex gap-4"><div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-emerald-400/15 text-emerald-400"><Cloud /></div><div><h2 className="font-extrabold">Çevrim içi ve güvende</h2><p className="mt-1 max-w-2xl text-sm leading-6 text-slate-400">Kayıtlar Supabase üzerinde tutulur ve tüm cihazlarda ortak görünür. Ek olarak JSON yedeği alabilirsiniz.</p></div></div><div className="flex shrink-0 flex-col gap-2 sm:flex-row"><button disabled={loading} onClick={() => restoreInput.current?.click()} className="btn-secondary border-slate-600 bg-slate-800 text-white hover:bg-slate-700"><FileUp size={17} /> Yedekten yükle</button><button onClick={backup} className="btn-primary"><Download size={17} /> JSON yedeği indir</button><input ref={restoreInput} onChange={restore} type="file" accept="application/json" hidden /></div></section>
   </>
 }
+
+function PrintCenter({ records, notify }) {
+  const [reportType, setReportType] = useState('daily')
+  const [date, setDate] = useState(localDate())
+  const [year, setYear] = useState(currentYear)
+  const [month, setMonth] = useState(currentMonth)
+  const [vatInvoices, setVatInvoices] = useState([])
+
+  useEffect(() => {
+    supabase.from('vat_invoices').select('*').order('invoice_date', { ascending: true }).then(({ data, error }) => {
+      if (error) { console.error(error); notify('Fatura kayıtları yüklenemedi.'); return }
+      setVatInvoices((data || []).map(item => ({ ...item, base_amount: Number(item.base_amount) || 0, vat_rate: Number(item.vat_rate) || 0, vat_amount: Number(item.vat_amount) || 0, total_amount: Number(item.total_amount) || 0 })))
+    })
+  }, [notify])
+
+  const dailyRecords = useMemo(() => records.filter(item => item.date === date), [records, date])
+  const monthlyRecords = useMemo(() => records.filter(item => { const [itemYear, itemMonth] = item.date.split('-').map(Number); return itemYear === Number(year) && itemMonth === Number(month) }), [records, year, month])
+  const monthlyInvoices = useMemo(() => vatInvoices.filter(item => { const [itemYear, itemMonth] = item.invoice_date.split('-').map(Number); return itemYear === Number(year) && itemMonth === Number(month) }), [vatInvoices, year, month])
+  const reportRecords = reportType === 'daily' ? dailyRecords : monthlyRecords
+  const reportTotals = totals(reportRecords)
+  const reportRevenue = reportTotals.cash + reportTotals.pos + reportTotals.pos1 + reportTotals.online
+  const reportNet = reportRevenue - reportTotals.expense
+  const salesVat = monthlyInvoices.filter(item => item.invoice_type === 'sale').reduce((sum, item) => sum + item.vat_amount, 0)
+  const purchaseVat = monthlyInvoices.filter(item => item.invoice_type === 'purchase').reduce((sum, item) => sum + item.vat_amount, 0)
+  const vatBalance = salesVat - purchaseVat
+  const title = reportType === 'daily' ? 'Günlük Kasa Raporu' : reportType === 'monthly' ? 'Aylık Kasa Raporu' : 'KDV ve Fatura Dökümü'
+  const period = reportType === 'daily' ? displayDate(date) : `${MONTHS[Number(month) - 1]} ${year}`
+
+  return <>
+    <div className="no-print">
+      <PageHeading eyebrow="PDF VE YAZDIRMA" title="Çıktı merkezi" description="Raporunuzu seçin, önizleyin ve yazdırma ekranından PDF olarak kaydedin veya kâğıda çıktı alın." />
+      <section className="panel mb-5 p-5 sm:p-6"><div className="grid gap-4 md:grid-cols-[1fr_auto_auto] md:items-end"><Field label="Rapor türü"><select className="field" value={reportType} onChange={event => setReportType(event.target.value)}><option value="daily">Günlük kasa raporu</option><option value="monthly">Aylık kasa raporu</option><option value="vat">KDV / fatura dökümü</option></select></Field>{reportType === 'daily' ? <Field label="Rapor tarihi"><input className="field w-full md:w-44" type="date" value={date} onChange={event => setDate(event.target.value)} /></Field> : <div className="grid grid-cols-2 gap-2"><Field label="Yıl"><input className="field w-full md:w-28" type="number" min="2020" max="2100" value={year} onChange={event => setYear(event.target.value)} /></Field><Field label="Ay"><select className="field w-full md:w-36" value={month} onChange={event => setMonth(event.target.value)}>{MONTHS.map((name, index) => <option value={index + 1} key={name}>{name}</option>)}</select></Field></div>}<button onClick={() => window.print()} className="btn-primary"><Printer size={19} /> Yazdır / PDF Kaydet</button></div><div className="mt-4 flex items-start gap-3 rounded-xl bg-blue-50 p-3.5 text-xs leading-5 text-blue-700"><FileText className="mt-0.5 shrink-0" size={18} /> Açılan yazdırma penceresinde yazıcınızı seçebilir veya hedef olarak <strong>PDF olarak kaydet</strong> seçeneğini kullanabilirsiniz.</div></section>
+    </div>
+
+    <section className="print-sheet panel mx-auto max-w-[1100px] overflow-hidden bg-white">
+      <header className="flex items-start justify-between border-b-2 border-slate-900 p-6 sm:p-8"><div><div className="mb-4 flex items-center gap-3"><div className="grid size-11 place-items-center rounded-xl bg-emerald-500 text-xl font-black text-white">₺</div><div><strong className="block text-lg font-extrabold">Dükkan Kasa</strong><small className="text-slate-500">Gelir • Gider • KDV Takibi</small></div></div><h1 className="text-2xl font-extrabold text-slate-950">{title}</h1><p className="mt-1 text-sm text-slate-500">{period}</p></div><div className="text-right text-xs text-slate-400"><span className="block">Oluşturma tarihi</span><strong className="text-slate-700">{new Date().toLocaleString('tr-TR')}</strong></div></header>
+
+      {reportType !== 'vat' ? <CashPrintReport records={reportRecords} sum={reportTotals} revenue={reportRevenue} net={reportNet} /> : <VatPrintReport invoices={monthlyInvoices} salesVat={salesVat} purchaseVat={purchaseVat} balance={vatBalance} />}
+
+      <footer className="border-t border-slate-200 px-6 py-4 text-center text-[10px] text-slate-400 sm:px-8">Bu rapor Dükkan Kasa Takip uygulamasından oluşturulmuştur.</footer>
+    </section>
+  </>
+}
+
+function CashPrintReport({ records, sum, revenue, net }) {
+  return <div className="p-6 sm:p-8"><div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4"><PrintStat label="Toplam Ciro" value={money(revenue)} /><PrintStat label="Toplam Gider" value={money(sum.expense)} /><PrintStat label="Net Kasa" value={money(net)} /><PrintStat label="İşlem Sayısı" value={records.length} /></div><div className="mb-6 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4"><PrintStat label="Nakit" value={money(sum.cash)} small /><PrintStat label="POS / Kart" value={money(sum.pos)} small /><PrintStat label="POS %1" value={money(sum.pos1)} small /><PrintStat label="Online" value={money(sum.online)} small /></div><div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead className="bg-slate-900 text-white"><tr><th className="p-2.5">Tarih</th><th className="p-2.5">Açıklama</th><th className="p-2.5 text-right">Nakit</th><th className="p-2.5 text-right">POS</th><th className="p-2.5 text-right">POS %1</th><th className="p-2.5 text-right">Online</th><th className="p-2.5">Gider Kalemi</th><th className="p-2.5 text-right">Gider</th><th className="p-2.5 text-right">Net</th></tr></thead><tbody className="divide-y divide-slate-200">{records.length ? records.map(item => { const revenueItem = revenueOf(item); return <tr key={item.id}><td className="p-2.5 whitespace-nowrap">{displayDate(item.date)}</td><td className="p-2.5">{item.description || '—'}</td><td className="p-2.5 text-right">{money(item.cash)}</td><td className="p-2.5 text-right">{money(item.pos)}</td><td className="p-2.5 text-right">{money(item.pos1)}</td><td className="p-2.5 text-right">{money(item.online)}</td><td className="p-2.5">{item.expenseItem || '—'}</td><td className="p-2.5 text-right">{money(item.expense)}</td><td className="p-2.5 text-right font-bold">{money(revenueItem - item.expense)}</td></tr> }) : <tr><td colSpan="9" className="p-8 text-center text-slate-400">Bu dönem için kayıt bulunmuyor.</td></tr>}</tbody></table></div></div>
+}
+
+function VatPrintReport({ invoices, salesVat, purchaseVat, balance }) {
+  return <div className="p-6 sm:p-8"><div className="mb-6 grid grid-cols-3 gap-3"><PrintStat label="Hesaplanan KDV" value={money(salesVat)} /><PrintStat label="İndirilecek KDV" value={money(purchaseVat)} /><PrintStat label={balance >= 0 ? 'Ödenecek KDV' : 'Devreden KDV'} value={money(Math.abs(balance))} /></div><div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead className="bg-slate-900 text-white"><tr><th className="p-2.5">Tarih</th><th className="p-2.5">Tür</th><th className="p-2.5">Firma / Fatura</th><th className="p-2.5 text-right">Matrah</th><th className="p-2.5 text-right">Oran</th><th className="p-2.5 text-right">KDV</th><th className="p-2.5 text-right">Toplam</th></tr></thead><tbody className="divide-y divide-slate-200">{invoices.length ? invoices.map(item => <tr key={item.id}><td className="p-2.5 whitespace-nowrap">{displayDate(item.invoice_date)}</td><td className="p-2.5">{item.invoice_type === 'sale' ? 'Satış / Giden' : 'Alış / Gelen'}</td><td className="p-2.5"><strong className="block">{item.company_name || '—'}</strong><span className="text-slate-400">{item.invoice_no || item.description || ''}</span></td><td className="p-2.5 text-right">{money(item.base_amount)}</td><td className="p-2.5 text-right">%{item.vat_rate}</td><td className="p-2.5 text-right font-bold">{money(item.vat_amount)}</td><td className="p-2.5 text-right">{money(item.total_amount)}</td></tr>) : <tr><td colSpan="7" className="p-8 text-center text-slate-400">Bu dönem için fatura bulunmuyor.</td></tr>}</tbody></table></div></div>
+}
+
+function PrintStat({ label, value, small = false }) { return <div className={`rounded-xl border border-slate-200 bg-slate-50 ${small ? 'p-3' : 'p-4'}`}><small className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</small><strong className={`mt-1 block text-slate-900 ${small ? 'text-sm' : 'text-lg'}`}>{value}</strong></div> }
 
 function VatCalculator({ loading, setLoading, notify }) {
   const emptyForm = { invoiceDate: localDate(), invoiceType: 'sale', invoiceNo: '', companyName: '', description: '', baseAmount: '', vatRate: '20', note: '' }

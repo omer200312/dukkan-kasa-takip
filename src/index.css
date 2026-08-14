@@ -28,3 +28,32 @@
 ::-webkit-scrollbar-track { background: transparent; }
 @keyframes toast-in { from { opacity: 0; transform: translate(-50%, 12px); } to { opacity: 1; transform: translate(-50%, 0); } }
 .toast-in { animation: toast-in .22s ease-out both; }
+
+@media print {
+  @page { size: A4 landscape; margin: 10mm; }
+
+  html,
+  body,
+  #root { background: #fff !important; }
+
+  body * { visibility: hidden !important; }
+
+  .print-sheet,
+  .print-sheet * { visibility: visible !important; }
+
+  .print-sheet {
+    position: absolute !important;
+    inset: 0 auto auto 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
+
+  .print-sheet table { page-break-inside: auto; }
+  .print-sheet tr { page-break-inside: avoid; page-break-after: auto; }
+  .no-print { display: none !important; }
+}
