@@ -23,8 +23,8 @@
         <p id="authError" class="auth-error" role="alert"></p>
         <button id="authSubmit" class="primary-btn" type="submit">Giriş Yap</button>
       </form>
-      <button id="authToggle" class="auth-toggle" type="button">Yeni kullanıcı oluştur</button>
-      <small class="auth-note">Bu tarayıcıdaki bütün kullanıcılar aynı ortak kasa kayıtlarını kullanır.</small>
+      <button id="authToggle" class="auth-toggle" type="button" hidden>Yeni kullanıcı oluştur</button>
+      <small class="auth-note">Giriş yapan bütün kullanıcılar aynı çevrim içi kasa kayıtlarını görür.</small>
     </div>
   </section>
 
@@ -74,10 +74,11 @@
     <section class="page" id="reports">
       <div class="page-heading"><div><p class="eyebrow">YILLIK BAKIŞ</p><h1>Aylık rapor</h1><p>Yıl boyunca ciro, gider ve net kasa karşılaştırması.</p></div><label class="report-year">Rapor yılı<input id="reportYear" type="number" min="2020" max="2100"></label></div>
       <div class="panel table-panel"><div class="table-wrap"><table class="report-table"><thead><tr><th>Ay</th><th class="num">Nakit</th><th class="num">POS / Kart</th><th class="num">POS %1</th><th class="num">Online</th><th class="num">Toplam Ciro</th><th class="num">Gider</th><th class="num">Net Kasa</th></tr></thead><tbody id="reportRows"></tbody><tfoot id="reportTotal"></tfoot></table></div></div>
-      <div class="backup-panel"><div><h2>Verilerinizi koruyun</h2><p>Kayıtlar bu cihazda saklanır. Düzenli olarak JSON yedeği indirmenizi öneririz.</p></div><div><button class="ghost-btn" id="restoreBtn">Yedekten yükle</button><button class="primary-btn" id="backupBtn2">JSON yedeği indir</button><input id="restoreInput" type="file" accept="application/json" hidden></div></div>
+      <div class="backup-panel"><div><h2>Çevrim içi ve güvende</h2><p>Kayıtlar Supabase üzerinde tutulur ve giriş yapılan bütün cihazlarda ortak görünür. İsterseniz ayrıca JSON yedeği indirebilirsiniz.</p></div><div><button class="ghost-btn" id="restoreBtn">Yedekten yükle</button><button class="primary-btn" id="backupBtn2">JSON yedeği indir</button><input id="restoreInput" type="file" accept="application/json" hidden></div></div>
     </section>
   </main>
   <div id="toast" role="status" aria-live="polite"></div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.95.0/dist/umd/supabase.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
