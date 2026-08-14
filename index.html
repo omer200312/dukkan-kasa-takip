@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#17365d" />
+  <title>Dükkan Kasa Takip</title>
+  <meta name="description" content="Günlük gelir, gider ve aylık kasa takibi." />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="auth.css" />
+</head>
+<body>
+  <section id="authScreen" class="auth-screen">
+    <div class="auth-card">
+      <div class="auth-logo">₺</div>
+      <p class="eyebrow">DÜKKÂN KASA TAKİP</p>
+      <h1 id="authTitle">Hesabınıza giriş yapın</h1>
+      <p id="authSubtitle">Kasa kayıtlarınıza ulaşmak için kullanıcı adı ve şifrenizi girin.</p>
+      <form id="authForm">
+        <label>Kullanıcı adı<input id="authUsername" type="text" minlength="3" maxlength="30" autocomplete="username" required placeholder="Kullanıcı adınız"></label>
+        <label>Şifre<input id="authPassword" type="password" minlength="6" maxlength="80" autocomplete="current-password" required placeholder="En az 6 karakter"></label>
+        <label id="confirmLabel" hidden>Şifre tekrar<input id="authConfirm" type="password" minlength="6" maxlength="80" autocomplete="new-password" placeholder="Şifrenizi tekrar yazın"></label>
+        <p id="authError" class="auth-error" role="alert"></p>
+        <button id="authSubmit" class="primary-btn" type="submit">Giriş Yap</button>
+      </form>
+      <button id="authToggle" class="auth-toggle" type="button">Yeni kullanıcı oluştur</button>
+      <small class="auth-note">Bu tarayıcıdaki bütün kullanıcılar aynı ortak kasa kayıtlarını kullanır.</small>
+    </div>
+  </section>
+
+  <header class="topbar app-shell" hidden>
+    <div class="brand"><span class="brand-mark">₺</span><div><strong>Dükkan Kasa</strong><small>Gelir • Gider • Ciro Takibi</small></div></div>
+    <nav aria-label="Ana menü">
+      <button class="nav-btn active" data-page="dashboard">Ana Menü</button>
+      <button class="nav-btn" data-page="transactions">Günlük İşlemler</button>
+      <button class="nav-btn" data-page="reports">Aylık Rapor</button>
+    </nav>
+    <div class="account-box"><span id="currentUser"></span><button class="ghost-btn" id="backupBtn">Yedekle</button><button class="logout-btn" id="logoutBtn">Çıkış</button></div>
+  </header>
+
+  <main class="app-shell" hidden>
+    <section class="page active" id="dashboard">
+      <div class="page-heading"><div><p class="eyebrow">GENEL DURUM</p><h1>Kasa kontrol paneli</h1><p>Gelir ve giderlerinizi tek bakışta takip edin.</p></div><div class="period"><label>Yıl<input id="dashYear" type="number" min="2020" max="2100"></label><label>Ay<select id="dashMonth"></select></label></div></div>
+      <div class="kpi-grid">
+        <article class="kpi income"><span>Toplam Ciro</span><strong id="kpiRevenue">₺0,00</strong><small>Nakit + kart + online</small></article>
+        <article class="kpi expense"><span>Toplam Gider</span><strong id="kpiExpense">₺0,00</strong><small>Kalem kalem gider toplamı</small></article>
+        <article class="kpi net"><span>Net Kasa</span><strong id="kpiNet">₺0,00</strong><small>Ciro − gider</small></article>
+        <article class="kpi count"><span>İşlem Sayısı</span><strong id="kpiCount">0</strong><small>Seçili ay içindeki kayıt</small></article>
+      </div>
+      <div class="dashboard-grid">
+        <article class="panel"><div class="panel-title"><div><p class="eyebrow">ÖDEME DAĞILIMI</p><h2>Gelir kanalları</h2></div></div><div class="payment-list"><div><span><i class="dot cash"></i>Nakit</span><strong id="cashTotal">₺0,00</strong></div><div><span><i class="dot pos"></i>POS / Kart</span><strong id="posTotal">₺0,00</strong></div><div><span><i class="dot pos1"></i>POS %1</span><strong id="pos1Total">₺0,00</strong></div><div><span><i class="dot online"></i>Yemek kartı / Online</span><strong id="onlineTotal">₺0,00</strong></div></div></article>
+        <article class="panel"><div class="panel-title"><div><p class="eyebrow">SON HAREKETLER</p><h2>En son kayıtlar</h2></div><button class="text-btn" data-go="transactions">Tümünü gör</button></div><div id="recentList" class="recent-list"></div></article>
+      </div>
+    </section>
+
+    <section class="page" id="transactions">
+      <div class="page-heading"><div><p class="eyebrow">GÜNLÜK KAYIT</p><h1>Yeni işlem ekle</h1><p>Gelir ve giderleri ayrı ayrı, açıklamasıyla kaydedin.</p></div></div>
+      <form id="transactionForm" class="entry-form">
+        <label>Tarih<input id="date" type="date" required></label>
+        <label class="wide">Açıklama / Gelir kalemi<input id="description" type="text" maxlength="80" placeholder="Örn. Günlük satış"></label>
+        <label>Nakit<input id="cash" type="number" min="0" step="0.01" placeholder="0,00"></label>
+        <label>POS / Kart<input id="pos" type="number" min="0" step="0.01" placeholder="0,00"></label>
+        <label>POS %1<input id="pos1" type="number" min="0" step="0.01" placeholder="0,00"></label>
+        <label>Yemek kartı / Online<input id="online" type="number" min="0" step="0.01" placeholder="0,00"></label>
+        <label class="wide expense-field">Gider kalemi<input id="expenseItem" type="text" maxlength="80" placeholder="Örn. Elektrik, kira, mal alımı"></label>
+        <label class="expense-field">Gider tutarı<input id="expense" type="number" min="0" step="0.01" placeholder="0,00"></label>
+        <label class="wide">Not<input id="note" type="text" maxlength="120" placeholder="İsteğe bağlı"></label>
+        <div class="form-summary"><span>Toplam ciro <strong id="formRevenue">₺0,00</strong></span><span>Net kasa <strong id="formNet">₺0,00</strong></span></div>
+        <button class="primary-btn" type="submit">İşlemi Kaydet</button>
+      </form>
+      <div class="panel table-panel"><div class="panel-title"><div><p class="eyebrow">KAYITLAR</p><h2>İşlem geçmişi</h2></div><div class="table-actions"><input id="search" type="search" placeholder="Kayıtlarda ara"><button class="ghost-btn" id="exportCsvBtn">CSV indir</button></div></div><div class="table-wrap"><table><thead><tr><th>Tarih</th><th>Açıklama</th><th class="num">Ciro</th><th>Gider kalemi</th><th class="num">Gider</th><th class="num">Net</th><th></th></tr></thead><tbody id="transactionRows"></tbody></table></div></div>
+    </section>
+
+    <section class="page" id="reports">
+      <div class="page-heading"><div><p class="eyebrow">YILLIK BAKIŞ</p><h1>Aylık rapor</h1><p>Yıl boyunca ciro, gider ve net kasa karşılaştırması.</p></div><label class="report-year">Rapor yılı<input id="reportYear" type="number" min="2020" max="2100"></label></div>
+      <div class="panel table-panel"><div class="table-wrap"><table class="report-table"><thead><tr><th>Ay</th><th class="num">Nakit</th><th class="num">POS / Kart</th><th class="num">POS %1</th><th class="num">Online</th><th class="num">Toplam Ciro</th><th class="num">Gider</th><th class="num">Net Kasa</th></tr></thead><tbody id="reportRows"></tbody><tfoot id="reportTotal"></tfoot></table></div></div>
+      <div class="backup-panel"><div><h2>Verilerinizi koruyun</h2><p>Kayıtlar bu cihazda saklanır. Düzenli olarak JSON yedeği indirmenizi öneririz.</p></div><div><button class="ghost-btn" id="restoreBtn">Yedekten yükle</button><button class="primary-btn" id="backupBtn2">JSON yedeği indir</button><input id="restoreInput" type="file" accept="application/json" hidden></div></div>
+    </section>
+  </main>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>
