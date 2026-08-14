@@ -4,7 +4,7 @@ import {
   ChevronRight, CircleUserRound, Cloud, CreditCard, Download, FileUp, LayoutDashboard,
   LoaderCircle, LogOut, Menu, Plus, ReceiptText, Search, ShieldCheck, ShoppingBag,
   Smartphone, Trash2, TrendingUp, WalletCards, X, Calculator, Percent, Building2,
-  Printer, FileText,
+  Printer, FileText, Pencil, Save,
 } from 'lucide-react'
 import { supabase } from './supabase.js'
 
@@ -257,29 +257,56 @@ function Empty({ text }) { return <div className="py-10 text-center"><div classN
 function Transactions({ records, loading, setLoading, reload, notify }) {
   const initial = { date: localDate(), description: '', cash: '', pos: '', pos1: '', online: '', expenseItem: '', expense: '', note: '' }
   const [form, setForm] = useState(initial)
+  const [editingId, setEditingId] = useState(null)
   const [search, setSearch] = useState('')
+  const formRef = useRef(null)
   const set = (key, value) => setForm(previous => ({ ...previous, [key]: value }))
   const num = key => Number(form[key]) || 0
   const formRevenue = num('cash') + num('pos') + num('pos1') + num('online')
   const formPosCommission = (num('pos') + num('pos1')) * POS_COMMISSION_RATE
   const formNet = formRevenue - num('expense') - formPosCommission
   const filtered = useMemo(() => records.filter(r => !search || [r.date, r.description, r.expenseItem, r.note].join(' ').toLocaleLowerCase('tr').includes(search.toLocaleLowerCase('tr'))), [records, search])
+  const resetForm = (date = localDate()) => {
+    setEditingId(null)
+    setForm({ ...initial, date })
+  }
+  const startEdit = record => {
+    setEditingId(record.id)
+    setForm({
+      date: record.date,
+      description: record.description,
+      cash: record.cash || '',
+      pos: record.pos || '',
+      pos1: record.pos1 || '',
+      online: record.online || '',
+      expenseItem: record.expenseItem,
+      expense: record.expense || '',
+      note: record.note,
+    })
+    requestAnimationFrame(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+  }
   const submit = async event => {
     event.preventDefault()
     if (formRevenue + num('expense') <= 0) return notify('En az bir tutar girin.')
     if (num('expense') > 0 && !form.expenseItem.trim()) return notify('Lütfen gider kalemini yazın.')
     setLoading(true)
     try {
-      const { error } = await supabase.from('cash_records').insert(toRow({ ...form, expense: num('expense') }))
+      const row = toRow({ ...form, id: editingId || crypto.randomUUID(), expense: num('expense') })
+      const { id, ...changes } = row
+      const request = editingId
+        ? supabase.from('cash_records').update(changes).eq('id', editingId).select('id').single()
+        : supabase.from('cash_records').insert(row).select('id').single()
+      const { error } = await request
       if (error) throw error
-      setForm({ ...initial, date: form.date })
-      await reload({ quiet: true }); notify('İşlem ortak kasaya kaydedildi.')
-    } catch (error) { console.error(error); notify('Kayıt eklenemedi. Bağlantınızı kontrol edin.') } finally { setLoading(false) }
+      const wasEditing = Boolean(editingId)
+      resetForm(form.date)
+      await reload({ quiet: true }); notify(wasEditing ? 'Kasa kaydı güncellendi.' : 'İşlem ortak kasaya kaydedildi.')
+    } catch (error) { console.error(error); notify(editingId ? 'Kayıt güncellenemedi.' : 'Kayıt eklenemedi. Bağlantınızı kontrol edin.') } finally { setLoading(false) }
   }
   const remove = async id => {
     if (!confirm('Bu kaydı ortak kasadan silmek istediğinize emin misiniz?')) return
     setLoading(true)
-    try { const { error } = await supabase.from('cash_records').delete().eq('id', id); if (error) throw error; await reload({ quiet: true }); notify('Kayıt silindi.') }
+    try { const { error } = await supabase.from('cash_records').delete().eq('id', id).select('id').single(); if (error) throw error; if (editingId === id) resetForm(); await reload({ quiet: true }); notify('Kayıt silindi.') }
     catch (error) { console.error(error); notify('Kayıt silinemedi.') } finally { setLoading(false) }
   }
   const exportCsv = () => {
@@ -288,8 +315,8 @@ function Transactions({ records, loading, setLoading, reload, notify }) {
     notify('CSV dosyası indirildi.')
   }
   return <>
-    <PageHeading eyebrow="GÜNLÜK KAYIT" title="Yeni işlem ekle" description="Gelir ve giderleri ayrı ayrı, açıklamasıyla kaydedin." />
-    <form onSubmit={submit} className="panel overflow-hidden">
+    <PageHeading eyebrow="GÜNLÜK KAYIT" title={editingId ? 'Kasa kaydını düzenle' : 'Yeni işlem ekle'} description={editingId ? 'Seçtiğiniz kaydın bilgilerini değiştirip yeniden kaydedin.' : 'Gelir ve giderleri ayrı ayrı, açıklamasıyla kaydedin.'} />
+    <form ref={formRef} onSubmit={submit} className={`panel scroll-mt-5 overflow-hidden ${editingId ? 'ring-2 ring-emerald-400/40' : ''}`}>
       <div className="grid gap-4 p-5 sm:grid-cols-2 sm:p-6 xl:grid-cols-4">
         <Field label="Tarih"><input className="field" type="date" required value={form.date} onChange={e => set('date', e.target.value)} /></Field>
         <Field label="Açıklama / Gelir kalemi" className="sm:col-span-1 xl:col-span-3"><input className="field" maxLength="80" value={form.description} onChange={e => set('description', e.target.value)} placeholder="Örn. Günlük satış" /></Field>
@@ -301,19 +328,19 @@ function Transactions({ records, loading, setLoading, reload, notify }) {
         <AmountField label="Gider tutarı" icon={ArrowDownRight} value={form.expense} onChange={v => set('expense', v)} expense />
         <Field label="Not"><input className="field" maxLength="120" value={form.note} onChange={e => set('note', e.target.value)} placeholder="İsteğe bağlı" /></Field>
       </div>
-      <div className="flex flex-col gap-4 border-t border-slate-100 bg-slate-50/80 p-5 sm:flex-row sm:items-center sm:justify-between sm:px-6"><div className="flex flex-wrap gap-7"><span><small className="block text-xs text-slate-400">Toplam ciro</small><strong className="text-base text-emerald-600">{money(formRevenue)}</strong></span><span><small className="block text-xs text-slate-400">POS komisyonu (%3)</small><strong className="text-base text-violet-600">−{money(formPosCommission)}</strong></span><span><small className="block text-xs text-slate-400">Net kasa</small><strong className={formNet >= 0 ? 'text-blue-600' : 'text-red-500'}>{money(formNet)}</strong></span></div><button disabled={loading} className="btn-primary w-full sm:w-auto"><Plus size={19} /> İşlemi Kaydet</button></div>
+      <div className="flex flex-col gap-4 border-t border-slate-100 bg-slate-50/80 p-5 sm:flex-row sm:items-center sm:justify-between sm:px-6"><div className="flex flex-wrap gap-7"><span><small className="block text-xs text-slate-400">Toplam ciro</small><strong className="text-base text-emerald-600">{money(formRevenue)}</strong></span><span><small className="block text-xs text-slate-400">POS komisyonu (%3)</small><strong className="text-base text-violet-600">−{money(formPosCommission)}</strong></span><span><small className="block text-xs text-slate-400">Net kasa</small><strong className={formNet >= 0 ? 'text-blue-600' : 'text-red-500'}>{money(formNet)}</strong></span></div><div className="flex w-full gap-2 sm:w-auto">{editingId && <button type="button" disabled={loading} onClick={() => resetForm()} className="btn-secondary flex-1 sm:flex-none"><X size={18} /> Vazgeç</button>}<button type="submit" disabled={loading} className="btn-primary flex-1 sm:flex-none">{editingId ? <Save size={19} /> : <Plus size={19} />} {editingId ? 'Değişiklikleri Kaydet' : 'İşlemi Kaydet'}</button></div></div>
     </form>
     <section className="panel mt-5 overflow-hidden"><div className="flex flex-col gap-4 border-b border-slate-100 p-5 sm:flex-row sm:items-end sm:justify-between sm:p-6"><PanelTitle eyebrow="KAYITLAR" title="İşlem geçmişi" /><div className="flex gap-2"><div className="relative min-w-0 flex-1"><Search className="absolute left-3 top-3 text-slate-400" size={18} /><input className="field h-11 pl-10" type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Kayıtlarda ara" /></div><button type="button" onClick={exportCsv} className="btn-secondary shrink-0"><Download size={17} /><span className="hidden sm:inline">CSV indir</span></button></div></div>
-      <div className="divide-y divide-slate-100 md:hidden">{filtered.length ? filtered.map(r => <TransactionCard key={r.id} record={r} remove={remove} />) : <Empty text="Henüz işlem kaydı bulunmuyor." />}</div>
-      <div className="hidden overflow-x-auto md:block"><table className="w-full min-w-[950px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-400"><tr><Th>Tarih</Th><Th>Açıklama</Th><Th right>Ciro</Th><Th right>POS Kesinti</Th><Th>Gider kalemi</Th><Th right>Gider</Th><Th right>Net</Th><Th /></tr></thead><tbody className="divide-y divide-slate-100">{filtered.length ? filtered.map(r => <TransactionRow key={r.id} record={r} remove={remove} />) : <tr><td colSpan="8"><Empty text="Henüz işlem kaydı bulunmuyor." /></td></tr>}</tbody></table></div>
+      <div className="divide-y divide-slate-100 md:hidden">{filtered.length ? filtered.map(r => <TransactionCard key={r.id} record={r} edit={startEdit} remove={remove} />) : <Empty text="Henüz işlem kaydı bulunmuyor." />}</div>
+      <div className="hidden overflow-x-auto md:block"><table className="w-full min-w-[950px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-400"><tr><Th>Tarih</Th><Th>Açıklama</Th><Th right>Ciro</Th><Th right>POS Kesinti</Th><Th>Gider kalemi</Th><Th right>Gider</Th><Th right>Net</Th><Th right>İşlemler</Th></tr></thead><tbody className="divide-y divide-slate-100">{filtered.length ? filtered.map(r => <TransactionRow key={r.id} record={r} edit={startEdit} remove={remove} />) : <tr><td colSpan="8"><Empty text="Henüz işlem kaydı bulunmuyor." /></td></tr>}</tbody></table></div>
     </section>
   </>
 }
 
 function AmountField({ label, icon: Icon, value, onChange, expense = false }) { return <Field label={label}><div className="relative"><Icon className={`absolute left-3.5 top-3.5 ${expense ? 'text-red-400' : 'text-slate-400'}`} size={19} /><input className={`field pl-11 ${expense ? 'border-red-100 bg-red-50/40 focus:border-red-400 focus:ring-red-400/10' : ''}`} inputMode="decimal" type="number" min="0" step="0.01" value={value} onChange={e => onChange(e.target.value)} placeholder="0,00" /></div></Field> }
 function Th({ children, right = false }) { return <th className={`px-5 py-3.5 font-bold ${right ? 'text-right' : ''}`}>{children}</th> }
-function TransactionRow({ record: r, remove }) { const revenue = revenueOf(r), commission = posCommissionOf(r), net = netOf(r); return <tr className="hover:bg-slate-50/70"><td className="whitespace-nowrap px-5 py-4 text-slate-500">{displayDate(r.date)}</td><td className="max-w-[230px] px-5 py-4"><strong className="block truncate text-slate-800">{r.description || '—'}</strong>{r.note && <small className="block truncate text-slate-400">{r.note}</small>}</td><td className="px-5 py-4 text-right font-bold text-emerald-600">{money(revenue)}</td><td className="px-5 py-4 text-right font-semibold text-violet-600">−{money(commission)}</td><td className="px-5 py-4 text-slate-600">{r.expenseItem || '—'}</td><td className="px-5 py-4 text-right font-semibold text-red-500">{money(r.expense)}</td><td className={`px-5 py-4 text-right font-bold ${net >= 0 ? 'text-blue-600' : 'text-red-500'}`}>{money(net)}</td><td className="px-5 py-4 text-right"><button aria-label="Kaydı sil" onClick={() => remove(r.id)} className="rounded-lg p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-500"><Trash2 size={17} /></button></td></tr> }
-function TransactionCard({ record: r, remove }) { const revenue = revenueOf(r), commission = posCommissionOf(r), net = netOf(r); return <article className="p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><strong className="block truncate text-sm text-slate-900">{r.description || r.expenseItem || 'İşlem'}</strong><small className="mt-1 flex items-center gap-1 text-slate-400"><CalendarDays size={13} />{displayDate(r.date)}</small></div><button aria-label="Kaydı sil" onClick={() => remove(r.id)} className="rounded-lg bg-slate-50 p-2 text-slate-400"><Trash2 size={17} /></button></div><div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-slate-50 p-3 text-center sm:grid-cols-4"><span><small className="block text-[10px] uppercase text-slate-400">Ciro</small><strong className="text-xs text-emerald-600">{shortMoney(revenue)}</strong></span><span><small className="block text-[10px] uppercase text-slate-400">POS Kesinti</small><strong className="text-xs text-violet-600">−{shortMoney(commission)}</strong></span><span><small className="block text-[10px] uppercase text-slate-400">Gider</small><strong className="text-xs text-red-500">{shortMoney(r.expense)}</strong></span><span><small className="block text-[10px] uppercase text-slate-400">Net</small><strong className={`text-xs ${net >= 0 ? 'text-blue-600' : 'text-red-500'}`}>{shortMoney(net)}</strong></span></div>{(r.expenseItem || r.note) && <p className="mt-3 text-xs leading-5 text-slate-500">{r.expenseItem && <><strong>Gider:</strong> {r.expenseItem} </>}{r.note && <>• {r.note}</>}</p>}</article> }
+function TransactionRow({ record: r, edit, remove }) { const revenue = revenueOf(r), commission = posCommissionOf(r), net = netOf(r); return <tr className="hover:bg-slate-50/70"><td className="whitespace-nowrap px-5 py-4 text-slate-500">{displayDate(r.date)}</td><td className="max-w-[230px] px-5 py-4"><strong className="block truncate text-slate-800">{r.description || '—'}</strong>{r.note && <small className="block truncate text-slate-400">{r.note}</small>}</td><td className="px-5 py-4 text-right font-bold text-emerald-600">{money(revenue)}</td><td className="px-5 py-4 text-right font-semibold text-violet-600">−{money(commission)}</td><td className="px-5 py-4 text-slate-600">{r.expenseItem || '—'}</td><td className="px-5 py-4 text-right font-semibold text-red-500">{money(r.expense)}</td><td className={`px-5 py-4 text-right font-bold ${net >= 0 ? 'text-blue-600' : 'text-red-500'}`}>{money(net)}</td><td className="px-5 py-4"><div className="flex justify-end gap-1"><button type="button" aria-label="Kaydı düzenle" title="Düzenle" onClick={() => edit(r)} className="rounded-lg p-2 text-slate-400 transition hover:bg-blue-50 hover:text-blue-600"><Pencil size={17} /></button><button type="button" aria-label="Kaydı sil" title="Sil" onClick={() => remove(r.id)} className="rounded-lg p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-500"><Trash2 size={17} /></button></div></td></tr> }
+function TransactionCard({ record: r, edit, remove }) { const revenue = revenueOf(r), commission = posCommissionOf(r), net = netOf(r); return <article className="p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><strong className="block truncate text-sm text-slate-900">{r.description || r.expenseItem || 'İşlem'}</strong><small className="mt-1 flex items-center gap-1 text-slate-400"><CalendarDays size={13} />{displayDate(r.date)}</small></div><div className="flex gap-1"><button type="button" aria-label="Kaydı düzenle" onClick={() => edit(r)} className="rounded-lg bg-blue-50 p-2 text-blue-600"><Pencil size={17} /></button><button type="button" aria-label="Kaydı sil" onClick={() => remove(r.id)} className="rounded-lg bg-red-50 p-2 text-red-500"><Trash2 size={17} /></button></div></div><div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-slate-50 p-3 text-center sm:grid-cols-4"><span><small className="block text-[10px] uppercase text-slate-400">Ciro</small><strong className="text-xs text-emerald-600">{shortMoney(revenue)}</strong></span><span><small className="block text-[10px] uppercase text-slate-400">POS Kesinti</small><strong className="text-xs text-violet-600">−{shortMoney(commission)}</strong></span><span><small className="block text-[10px] uppercase text-slate-400">Gider</small><strong className="text-xs text-red-500">{shortMoney(r.expense)}</strong></span><span><small className="block text-[10px] uppercase text-slate-400">Net</small><strong className={`text-xs ${net >= 0 ? 'text-blue-600' : 'text-red-500'}`}>{shortMoney(net)}</strong></span></div>{(r.expenseItem || r.note) && <p className="mt-3 text-xs leading-5 text-slate-500">{r.expenseItem && <><strong>Gider:</strong> {r.expenseItem} </>}{r.note && <>• {r.note}</>}</p>}</article> }
 
 function Reports({ records, loading, setLoading, reload, notify }) {
   const [year, setYear] = useState(currentYear)
@@ -410,9 +437,11 @@ function VatCalculator({ loading, setLoading, notify }) {
   const emptyForm = { invoiceDate: localDate(), invoiceType: 'sale', invoiceNo: '', companyName: '', description: '', baseAmount: '', vatRate: '20', note: '' }
   const [invoices, setInvoices] = useState([])
   const [form, setForm] = useState(emptyForm)
+  const [editingId, setEditingId] = useState(null)
   const [year, setYear] = useState(currentYear)
   const [month, setMonth] = useState(currentMonth)
   const [search, setSearch] = useState('')
+  const formRef = useRef(null)
   const set = (key, value) => setForm(previous => ({ ...previous, [key]: value }))
   const loadInvoices = useCallback(async () => {
     const { data, error } = await supabase.from('vat_invoices').select('*').order('invoice_date', { ascending: false }).order('created_at', { ascending: false })
@@ -439,26 +468,50 @@ function VatCalculator({ loading, setLoading, notify }) {
   const previewTotal = baseAmount + previewVat
   const visibleInvoices = useMemo(() => periodInvoices.filter(item => !search || [item.company_name, item.invoice_no, item.description, item.note].join(' ').toLocaleLowerCase('tr').includes(search.toLocaleLowerCase('tr'))), [periodInvoices, search])
 
+  const resetForm = (invoiceDate = localDate(), invoiceType = 'sale') => {
+    setEditingId(null)
+    setForm({ ...emptyForm, invoiceDate, invoiceType })
+  }
+  const startEdit = item => {
+    setEditingId(item.id)
+    setForm({
+      invoiceDate: item.invoice_date,
+      invoiceType: item.invoice_type,
+      invoiceNo: item.invoice_no || '',
+      companyName: item.company_name || '',
+      description: item.description || '',
+      baseAmount: item.base_amount || '',
+      vatRate: String(item.vat_rate),
+      note: item.note || '',
+    })
+    requestAnimationFrame(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+  }
+
   const submit = async event => {
     event.preventDefault()
     if (baseAmount <= 0) return notify('Fatura matrahını girin.')
     if (vatRate < 0 || vatRate > 100) return notify('KDV oranı 0 ile 100 arasında olmalı.')
     setLoading(true)
     try {
-      const { error } = await supabase.from('vat_invoices').insert({
+      const changes = {
         invoice_date: form.invoiceDate, invoice_type: form.invoiceType, invoice_no: form.invoiceNo.trim().slice(0, 80),
         company_name: form.companyName.trim().slice(0, 100), description: form.description.trim().slice(0, 120),
         base_amount: baseAmount, vat_rate: vatRate, note: form.note.trim().slice(0, 160),
-      })
+      }
+      const request = editingId
+        ? supabase.from('vat_invoices').update(changes).eq('id', editingId).select('id').single()
+        : supabase.from('vat_invoices').insert(changes).select('id').single()
+      const { error } = await request
       if (error) throw error
-      setForm({ ...emptyForm, invoiceDate: form.invoiceDate, invoiceType: form.invoiceType })
-      await loadInvoices(); notify('KDV faturası ortak kayıtlara eklendi.')
-    } catch (error) { console.error(error); notify('KDV kaydı eklenemedi.') } finally { setLoading(false) }
+      const wasEditing = Boolean(editingId)
+      resetForm(form.invoiceDate, form.invoiceType)
+      await loadInvoices(); notify(wasEditing ? 'KDV faturası güncellendi.' : 'KDV faturası ortak kayıtlara eklendi.')
+    } catch (error) { console.error(error); notify(editingId ? 'KDV kaydı güncellenemedi.' : 'KDV kaydı eklenemedi.') } finally { setLoading(false) }
   }
   const remove = async id => {
     if (!confirm('Bu KDV faturasını silmek istediğinize emin misiniz?')) return
     setLoading(true)
-    try { const { error } = await supabase.from('vat_invoices').delete().eq('id', id); if (error) throw error; await loadInvoices(); notify('KDV kaydı silindi.') }
+    try { const { error } = await supabase.from('vat_invoices').delete().eq('id', id).select('id').single(); if (error) throw error; if (editingId === id) resetForm(); await loadInvoices(); notify('KDV kaydı silindi.') }
     catch (error) { console.error(error); notify('KDV kaydı silinemedi.') } finally { setLoading(false) }
   }
 
@@ -473,8 +526,8 @@ function VatCalculator({ loading, setLoading, notify }) {
       <Kpi title={vatBalance >= 0 ? 'Ödenecek KDV' : 'Devreden KDV'} value={money(Math.abs(vatBalance))} note={vatBalance >= 0 ? 'Hesaplanan eksi indirilecek' : 'Sonraki aya devreden tutar'} icon={Calculator} tone={vatBalance >= 0 ? 'red' : 'blue'} />
     </div>
 
-    <form onSubmit={submit} className="panel mt-5 overflow-hidden">
-      <div className="border-b border-slate-100 p-5 sm:p-6"><PanelTitle eyebrow="YENİ FATURA" title="KDV kaydı ekle" /></div>
+    <form ref={formRef} onSubmit={submit} className={`panel mt-5 scroll-mt-5 overflow-hidden ${editingId ? 'ring-2 ring-emerald-400/40' : ''}`}>
+      <div className="border-b border-slate-100 p-5 sm:p-6"><PanelTitle eyebrow={editingId ? 'FATURA DÜZENLEME' : 'YENİ FATURA'} title={editingId ? 'KDV kaydını düzenle' : 'KDV kaydı ekle'} /></div>
       <div className="grid gap-4 p-5 sm:grid-cols-2 sm:p-6 xl:grid-cols-4">
         <Field label="Fatura türü"><select className="field" value={form.invoiceType} onChange={e => set('invoiceType', e.target.value)}><option value="sale">Satış / Giden fatura</option><option value="purchase">Alış / Gelen fatura</option></select></Field>
         <Field label="Fatura tarihi"><input className="field" type="date" required value={form.invoiceDate} onChange={e => set('invoiceDate', e.target.value)} /></Field>
@@ -485,19 +538,19 @@ function VatCalculator({ loading, setLoading, notify }) {
         <Field label="Açıklama"><input className="field" value={form.description} onChange={e => set('description', e.target.value)} maxLength="120" placeholder="Mal / hizmet açıklaması" /></Field>
         <Field label="Not"><input className="field" value={form.note} onChange={e => set('note', e.target.value)} maxLength="160" placeholder="İsteğe bağlı" /></Field>
       </div>
-      <div className="flex flex-col gap-4 border-t border-slate-100 bg-slate-50/80 p-5 sm:flex-row sm:items-center sm:justify-between sm:px-6"><div className="grid grid-cols-3 gap-6"><span><small className="block text-xs text-slate-400">Matrah</small><strong>{money(baseAmount)}</strong></span><span><small className="block text-xs text-slate-400">KDV</small><strong className="text-violet-600">{money(previewVat)}</strong></span><span><small className="block text-xs text-slate-400">Fatura toplamı</small><strong className="text-emerald-600">{money(previewTotal)}</strong></span></div><button disabled={loading} className="btn-primary w-full sm:w-auto"><Plus size={19} /> Faturayı Kaydet</button></div>
+      <div className="flex flex-col gap-4 border-t border-slate-100 bg-slate-50/80 p-5 sm:flex-row sm:items-center sm:justify-between sm:px-6"><div className="grid grid-cols-3 gap-6"><span><small className="block text-xs text-slate-400">Matrah</small><strong>{money(baseAmount)}</strong></span><span><small className="block text-xs text-slate-400">KDV</small><strong className="text-violet-600">{money(previewVat)}</strong></span><span><small className="block text-xs text-slate-400">Fatura toplamı</small><strong className="text-emerald-600">{money(previewTotal)}</strong></span></div><div className="flex w-full gap-2 sm:w-auto">{editingId && <button type="button" disabled={loading} onClick={() => resetForm()} className="btn-secondary flex-1 sm:flex-none"><X size={18} /> Vazgeç</button>}<button type="submit" disabled={loading} className="btn-primary flex-1 sm:flex-none">{editingId ? <Save size={19} /> : <Plus size={19} />} {editingId ? 'Değişiklikleri Kaydet' : 'Faturayı Kaydet'}</button></div></div>
     </form>
 
     <section className="panel mt-5 overflow-hidden"><div className="flex flex-col gap-4 border-b border-slate-100 p-5 sm:flex-row sm:items-end sm:justify-between sm:p-6"><PanelTitle eyebrow="FATURALAR" title={`${MONTHS[Number(month) - 1]} ${year} KDV kayıtları`} /><div className="relative"><Search className="absolute left-3 top-3 text-slate-400" size={18} /><input className="field h-11 pl-10" type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Firma veya faturada ara" /></div></div>
-      <div className="divide-y divide-slate-100 md:hidden">{visibleInvoices.length ? visibleInvoices.map(item => <VatCard key={item.id} item={item} remove={remove} />) : <Empty text="Seçili ayda KDV faturası yok." />}</div>
-      <div className="hidden overflow-x-auto md:block"><table className="w-full min-w-[950px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-400"><tr><Th>Tarih</Th><Th>Tür</Th><Th>Firma / Fatura</Th><Th right>Matrah</Th><Th right>Oran</Th><Th right>KDV</Th><Th right>Toplam</Th><Th /></tr></thead><tbody className="divide-y divide-slate-100">{visibleInvoices.length ? visibleInvoices.map(item => <VatRow key={item.id} item={item} remove={remove} />) : <tr><td colSpan="8"><Empty text="Seçili ayda KDV faturası yok." /></td></tr>}</tbody></table></div>
+      <div className="divide-y divide-slate-100 md:hidden">{visibleInvoices.length ? visibleInvoices.map(item => <VatCard key={item.id} item={item} edit={startEdit} remove={remove} />) : <Empty text="Seçili ayda KDV faturası yok." />}</div>
+      <div className="hidden overflow-x-auto md:block"><table className="w-full min-w-[950px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-400"><tr><Th>Tarih</Th><Th>Tür</Th><Th>Firma / Fatura</Th><Th right>Matrah</Th><Th right>Oran</Th><Th right>KDV</Th><Th right>Toplam</Th><Th right>İşlemler</Th></tr></thead><tbody className="divide-y divide-slate-100">{visibleInvoices.length ? visibleInvoices.map(item => <VatRow key={item.id} item={item} edit={startEdit} remove={remove} />) : <tr><td colSpan="8"><Empty text="Seçili ayda KDV faturası yok." /></td></tr>}</tbody></table></div>
     </section>
   </>
 }
 
 function VatTypeBadge({ type }) { const sale = type === 'sale'; return <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold ${sale ? 'bg-emerald-50 text-emerald-700' : 'bg-violet-50 text-violet-700'}`}>{sale ? 'Satış / Giden' : 'Alış / Gelen'}</span> }
-function VatRow({ item, remove }) { return <tr className="hover:bg-slate-50/70"><td className="whitespace-nowrap px-5 py-4 text-slate-500">{displayDate(item.invoice_date)}</td><td className="px-5 py-4"><VatTypeBadge type={item.invoice_type} /></td><td className="max-w-[240px] px-5 py-4"><strong className="block truncate text-slate-800">{item.company_name || '—'}</strong><small className="block truncate text-slate-400">{item.invoice_no || item.description || '—'}</small></td><td className="px-5 py-4 text-right text-slate-600">{money(item.base_amount)}</td><td className="px-5 py-4 text-right text-slate-500">%{item.vat_rate}</td><td className={`px-5 py-4 text-right font-bold ${item.invoice_type === 'sale' ? 'text-emerald-600' : 'text-violet-600'}`}>{money(item.vat_amount)}</td><td className="px-5 py-4 text-right font-bold text-slate-800">{money(item.total_amount)}</td><td className="px-5 py-4 text-right"><button aria-label="KDV kaydını sil" onClick={() => remove(item.id)} className="rounded-lg p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-500"><Trash2 size={17} /></button></td></tr> }
-function VatCard({ item, remove }) { return <article className="p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><VatTypeBadge type={item.invoice_type} /><strong className="mt-2 block truncate text-sm text-slate-900">{item.company_name || item.description || 'Fatura'}</strong><small className="mt-1 block text-slate-400">{displayDate(item.invoice_date)} {item.invoice_no && `• ${item.invoice_no}`}</small></div><button aria-label="KDV kaydını sil" onClick={() => remove(item.id)} className="rounded-lg bg-slate-50 p-2 text-slate-400"><Trash2 size={17} /></button></div><div className="mt-4 grid grid-cols-3 gap-2 rounded-xl bg-slate-50 p-3 text-center"><span><small className="block text-[10px] uppercase text-slate-400">Matrah</small><strong className="text-xs text-slate-700">{shortMoney(item.base_amount)}</strong></span><span><small className="block text-[10px] uppercase text-slate-400">KDV %{item.vat_rate}</small><strong className={`text-xs ${item.invoice_type === 'sale' ? 'text-emerald-600' : 'text-violet-600'}`}>{shortMoney(item.vat_amount)}</strong></span><span><small className="block text-[10px] uppercase text-slate-400">Toplam</small><strong className="text-xs text-slate-900">{shortMoney(item.total_amount)}</strong></span></div></article> }
+function VatRow({ item, edit, remove }) { return <tr className="hover:bg-slate-50/70"><td className="whitespace-nowrap px-5 py-4 text-slate-500">{displayDate(item.invoice_date)}</td><td className="px-5 py-4"><VatTypeBadge type={item.invoice_type} /></td><td className="max-w-[240px] px-5 py-4"><strong className="block truncate text-slate-800">{item.company_name || '—'}</strong><small className="block truncate text-slate-400">{item.invoice_no || item.description || '—'}</small></td><td className="px-5 py-4 text-right text-slate-600">{money(item.base_amount)}</td><td className="px-5 py-4 text-right text-slate-500">%{item.vat_rate}</td><td className={`px-5 py-4 text-right font-bold ${item.invoice_type === 'sale' ? 'text-emerald-600' : 'text-violet-600'}`}>{money(item.vat_amount)}</td><td className="px-5 py-4 text-right font-bold text-slate-800">{money(item.total_amount)}</td><td className="px-5 py-4"><div className="flex justify-end gap-1"><button type="button" aria-label="KDV kaydını düzenle" title="Düzenle" onClick={() => edit(item)} className="rounded-lg p-2 text-slate-400 transition hover:bg-blue-50 hover:text-blue-600"><Pencil size={17} /></button><button type="button" aria-label="KDV kaydını sil" title="Sil" onClick={() => remove(item.id)} className="rounded-lg p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-500"><Trash2 size={17} /></button></div></td></tr> }
+function VatCard({ item, edit, remove }) { return <article className="p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><VatTypeBadge type={item.invoice_type} /><strong className="mt-2 block truncate text-sm text-slate-900">{item.company_name || item.description || 'Fatura'}</strong><small className="mt-1 block text-slate-400">{displayDate(item.invoice_date)} {item.invoice_no && `• ${item.invoice_no}`}</small></div><div className="flex gap-1"><button type="button" aria-label="KDV kaydını düzenle" onClick={() => edit(item)} className="rounded-lg bg-blue-50 p-2 text-blue-600"><Pencil size={17} /></button><button type="button" aria-label="KDV kaydını sil" onClick={() => remove(item.id)} className="rounded-lg bg-red-50 p-2 text-red-500"><Trash2 size={17} /></button></div></div><div className="mt-4 grid grid-cols-3 gap-2 rounded-xl bg-slate-50 p-3 text-center"><span><small className="block text-[10px] uppercase text-slate-400">Matrah</small><strong className="text-xs text-slate-700">{shortMoney(item.base_amount)}</strong></span><span><small className="block text-[10px] uppercase text-slate-400">KDV %{item.vat_rate}</small><strong className={`text-xs ${item.invoice_type === 'sale' ? 'text-emerald-600' : 'text-violet-600'}`}>{shortMoney(item.vat_amount)}</strong></span><span><small className="block text-[10px] uppercase text-slate-400">Toplam</small><strong className="text-xs text-slate-900">{shortMoney(item.total_amount)}</strong></span></div></article> }
 
 function ReportRow({ row: r, total = false }) { const cell = total ? 'px-5 py-4 text-right' : 'px-5 py-3.5 text-right text-slate-600'; return <tr className={total ? '' : 'hover:bg-slate-50'}><td className={`px-5 py-3.5 font-bold ${total ? '' : 'text-slate-800'}`}>{r.name}</td><td className={cell}>{money(r.cash)}</td><td className={cell}>{money(r.pos)}</td><td className={cell}>{money(r.pos1)}</td><td className={cell}>{money(r.online)}</td><td className={`${cell} font-bold ${total ? '' : 'text-emerald-600'}`}>{money(r.revenue)}</td><td className={`${cell} ${total ? '' : 'text-violet-600'}`}>−{money(r.posCommission)}</td><td className={`${cell} ${total ? '' : 'text-red-500'}`}>{money(r.expense)}</td><td className={`${cell} font-bold ${total ? '' : r.net >= 0 ? 'text-blue-600' : 'text-red-500'}`}>{money(r.net)}</td></tr> }
 
