@@ -337,6 +337,7 @@ function Reports({ records, loading, setLoading, reload, notify }) {
 }
 
 function PrintCenter({ records, notify }) {
+  const [documentMode, setDocumentMode] = useState(false)
   const [reportType, setReportType] = useState('daily')
   const [date, setDate] = useState(localDate())
   const [year, setYear] = useState(currentYear)
@@ -363,20 +364,26 @@ function PrintCenter({ records, notify }) {
   const title = reportType === 'daily' ? 'Günlük Kasa Raporu' : reportType === 'monthly' ? 'Aylık Kasa Raporu' : 'KDV ve Fatura Dökümü'
   const period = reportType === 'daily' ? displayDate(date) : `${MONTHS[Number(month) - 1]} ${year}`
 
-  return <>
-    <div className="no-print">
-      <PageHeading eyebrow="PDF VE YAZDIRMA" title="Çıktı merkezi" description="Raporunuzu seçin, önizleyin ve yazdırma ekranından PDF olarak kaydedin veya kâğıda çıktı alın." />
-      <section className="panel mb-5 p-5 sm:p-6"><div className="grid gap-4 md:grid-cols-[1fr_auto_auto] md:items-end"><Field label="Rapor türü"><select className="field" value={reportType} onChange={event => setReportType(event.target.value)}><option value="daily">Günlük kasa raporu</option><option value="monthly">Aylık kasa raporu</option><option value="vat">KDV / fatura dökümü</option></select></Field>{reportType === 'daily' ? <Field label="Rapor tarihi"><input className="field w-full md:w-44" type="date" value={date} onChange={event => setDate(event.target.value)} /></Field> : <div className="grid grid-cols-2 gap-2"><Field label="Yıl"><input className="field w-full md:w-28" type="number" min="2020" max="2100" value={year} onChange={event => setYear(event.target.value)} /></Field><Field label="Ay"><select className="field w-full md:w-36" value={month} onChange={event => setMonth(event.target.value)}>{MONTHS.map((name, index) => <option value={index + 1} key={name}>{name}</option>)}</select></Field></div>}<button onClick={() => window.print()} className="btn-primary"><Printer size={19} /> Yazdır / PDF Kaydet</button></div><div className="mt-4 flex items-start gap-3 rounded-xl bg-blue-50 p-3.5 text-xs leading-5 text-blue-700"><FileText className="mt-0.5 shrink-0" size={18} /> Açılan yazdırma penceresinde yazıcınızı seçebilir veya hedef olarak <strong>PDF olarak kaydet</strong> seçeneğini kullanabilirsiniz.</div></section>
-    </div>
+  const openPrintDocument = () => {
+    setDocumentMode(true)
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }
 
-    <section className="print-sheet panel mx-auto max-w-[1100px] overflow-hidden bg-white">
+  return <div className={documentMode ? 'fixed inset-0 z-[100] overflow-y-auto bg-slate-200' : ''}>
+    {documentMode && <div className="no-print sticky top-0 z-10 flex flex-col gap-3 bg-slate-950 px-4 py-3 text-white shadow-xl sm:flex-row sm:items-center sm:justify-between sm:px-6"><div><strong className="block">Belge önizleme</strong><small className="text-slate-400">{title} • {period}</small></div><div className="flex gap-2"><button onClick={() => setDocumentMode(false)} className="btn-secondary flex-1 border-slate-700 bg-slate-900 text-white sm:flex-none"><X size={18} /> Geri Dön</button><button onClick={() => window.print()} className="btn-primary flex-1 sm:flex-none"><Printer size={18} /> Yazdır / PDF Kaydet</button></div></div>}
+    {!documentMode && <div className="no-print">
+      <PageHeading eyebrow="PDF VE YAZDIRMA" title="Çıktı merkezi" description="Raporunuzu seçin, önizleyin ve yazdırma ekranından PDF olarak kaydedin veya kâğıda çıktı alın." />
+      <section className="panel mb-5 p-5 sm:p-6"><div className="grid gap-4 md:grid-cols-[1fr_auto_auto] md:items-end"><Field label="Rapor türü"><select className="field" value={reportType} onChange={event => setReportType(event.target.value)}><option value="daily">Günlük kasa raporu</option><option value="monthly">Aylık kasa raporu</option><option value="vat">KDV / fatura dökümü</option></select></Field>{reportType === 'daily' ? <Field label="Rapor tarihi"><input className="field w-full md:w-44" type="date" value={date} onChange={event => setDate(event.target.value)} /></Field> : <div className="grid grid-cols-2 gap-2"><Field label="Yıl"><input className="field w-full md:w-28" type="number" min="2020" max="2100" value={year} onChange={event => setYear(event.target.value)} /></Field><Field label="Ay"><select className="field w-full md:w-36" value={month} onChange={event => setMonth(event.target.value)}>{MONTHS.map((name, index) => <option value={index + 1} key={name}>{name}</option>)}</select></Field></div>}<button onClick={openPrintDocument} className="btn-primary"><Printer size={19} /> Belgeyi Aç / PDF</button></div><div className="mt-4 flex items-start gap-3 rounded-xl bg-blue-50 p-3.5 text-xs leading-5 text-blue-700"><FileText className="mt-0.5 shrink-0" size={18} /> Rapor ayrı bir belge önizlemesinde açılır. Bu pencereden yalnızca raporu yazdırabilir veya <strong>PDF olarak kaydedebilirsiniz.</strong></div></section>
+    </div>}
+
+    <section className={`print-sheet panel mx-auto max-w-[1100px] overflow-hidden bg-white ${documentMode ? 'my-5 sm:my-8' : ''}`}>
       <header className="flex items-start justify-between border-b-2 border-slate-900 p-6 sm:p-8"><div><div className="mb-4 flex items-center gap-3"><div className="grid size-11 place-items-center rounded-xl bg-emerald-500 text-xl font-black text-white">₺</div><div><strong className="block text-lg font-extrabold">Dükkan Kasa</strong><small className="text-slate-500">Gelir • Gider • KDV Takibi</small></div></div><h1 className="text-2xl font-extrabold text-slate-950">{title}</h1><p className="mt-1 text-sm text-slate-500">{period}</p></div><div className="text-right text-xs text-slate-400"><span className="block">Oluşturma tarihi</span><strong className="text-slate-700">{new Date().toLocaleString('tr-TR')}</strong></div></header>
 
       {reportType !== 'vat' ? <CashPrintReport records={reportRecords} sum={reportTotals} revenue={reportRevenue} net={reportNet} /> : <VatPrintReport invoices={monthlyInvoices} salesVat={salesVat} purchaseVat={purchaseVat} balance={vatBalance} />}
 
       <footer className="border-t border-slate-200 px-6 py-4 text-center text-[10px] text-slate-400 sm:px-8">Bu rapor Dükkan Kasa Takip uygulamasından oluşturulmuştur.</footer>
     </section>
-  </>
+  </div>
 }
 
 function CashPrintReport({ records, sum, revenue, net }) {
