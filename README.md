@@ -8,6 +8,8 @@ React, Tailwind CSS ve Supabase ile hazırlanmış; masaüstü ve mobil cihazlar
 - Kalem kalem gider girişi
 - Aylık kontrol paneli ve yıllık rapor
 - Gelen ve giden faturalar için aylık KDV hesaplama, ödenecek/devreden KDV sonucu
+- Mobil kameradan veya galeriden fotoğraf yüklemeli, özel Supabase Storage alanında saklanan ortak fiş arşivi
+- Fişlerde tarih, firma, kategori, tutar ve not takibi; aylık filtreleme, arama, düzenleme ve silme
 - Supabase ile tüm kullanıcılarda ortak, anlık güncellenen veriler
 - CSV dışa aktarma, JSON yedekleme ve yedekten geri yükleme
 - Mobil cihazlarda kart görünümü ve alt menü
