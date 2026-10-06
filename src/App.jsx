@@ -4,10 +4,11 @@ import {
   ChevronRight, CircleUserRound, Cloud, CreditCard, Download, FileUp, LayoutDashboard,
   LoaderCircle, LogOut, Menu, Plus, ReceiptText, Search, ShieldCheck, ShoppingBag,
   Smartphone, Trash2, TrendingUp, WalletCards, X, Calculator, Percent, Building2,
-  Printer, FileText, Pencil, Save, Globe2, Utensils,
+  Printer, FileText, Pencil, Save, Globe2, Utensils, Camera,
 } from 'lucide-react'
 import { supabase } from './supabase.js'
 import OnlinePayments from './OnlinePayments.jsx'
+import Receipts from './Receipts.jsx'
 import { ONLINE_PROVIDERS, onlineGrandTotal, onlineProviderTotals, mapOnlinePayment } from './onlinePayments.js'
 
 const MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık']
@@ -163,6 +164,7 @@ function App() {
       <main className="mx-auto min-h-screen max-w-[1600px] px-4 pb-28 pt-6 md:px-7 lg:ml-[260px] lg:px-10 lg:pb-12 lg:pt-8">
         {page === 'dashboard' && <Dashboard records={records} go={go} />}
         {page === 'transactions' && <Transactions records={records} loading={loading} setLoading={setLoading} reload={loadRecords} notify={notify} />}
+        {page === 'receipts' && <Receipts loading={loading} setLoading={setLoading} notify={notify} />}
         {page === 'online' && <OnlinePayments records={onlinePayments} loading={loading} setLoading={setLoading} reload={loadOnlinePayments} notify={notify} />}
         {page === 'reports' && <Reports records={records} onlinePayments={onlinePayments} loading={loading} setLoading={setLoading} reload={loadRecords} notify={notify} />}
         {page === 'vat' && <VatCalculator loading={loading} setLoading={setLoading} notify={notify} />}
@@ -228,6 +230,7 @@ function Brand({ light = false }) {
 const navItems = [
   { id: 'dashboard', label: 'Ana Menü', icon: LayoutDashboard },
   { id: 'transactions', label: 'Günlük İşlemler', icon: ReceiptText },
+  { id: 'receipts', label: 'Fiş Arşivi', icon: Camera },
   { id: 'online', label: 'Online / Yemek Kartı', icon: Globe2 },
   { id: 'reports', label: 'Aylık Rapor', icon: BarChart3 },
   { id: 'vat', label: 'KDV Hesaplama', icon: Calculator },
@@ -241,7 +244,8 @@ function Sidebar({ page, go, username }) {
 function NavButton({ item, active, onClick }) { const Icon = item.icon; return <button onClick={onClick} className={`flex w-full items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold transition ${active ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'text-slate-400 hover:bg-slate-900 hover:text-white'}`}><Icon size={20} />{item.label}</button> }
 function MobileHeader({ onMenu, username }) { return <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200/80 bg-white/90 px-4 backdrop-blur lg:hidden"><Brand /><button onClick={onMenu} aria-label="Menüyü aç" className="grid size-11 place-items-center rounded-xl bg-slate-100 text-slate-700"><Menu /></button><span className="sr-only">{username}</span></header> }
 function MobileDrawer({ page, go, close, username }) { return <div className="fixed inset-0 z-50 lg:hidden"><button aria-label="Menüyü kapat" onClick={close} className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm" /><aside className="absolute inset-y-0 right-0 w-[min(86vw,340px)] bg-slate-950 p-5 text-white shadow-2xl"><div className="flex items-center justify-between"><Brand light /><button onClick={close} className="grid size-10 place-items-center rounded-xl bg-slate-800"><X /></button></div><nav className="mt-9 space-y-2">{navItems.map(item => <NavButton key={item.id} item={item} active={page === item.id} onClick={() => go(item.id)} />)}</nav><div className="absolute bottom-6 left-5 right-5"><p className="mb-3 text-sm text-slate-400">Giriş yapan: <strong className="text-white">{username}</strong></p><button onClick={() => confirm('Oturumu kapatmak istiyor musunuz?') && supabase.auth.signOut()} className="btn-secondary w-full border-slate-700 bg-slate-900 text-slate-200"><LogOut size={17} /> Çıkış yap</button></div></aside></div> }
-function BottomNav({ page, go }) { return <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-6 border-t border-slate-200 bg-white/95 px-0.5 pb-[max(.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-10px_30px_rgba(15,23,42,.06)] backdrop-blur lg:hidden">{navItems.map(item => { const Icon = item.icon; const active = page === item.id; const shortLabel = item.id === 'transactions' ? 'İşlemler' : item.id === 'online' ? 'Online' : item.id === 'reports' ? 'Rapor' : item.id === 'vat' ? 'KDV' : item.id === 'print' ? 'Çıktı' : item.label; return <button key={item.id} onClick={() => go(item.id)} className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-[8px] font-bold sm:text-[10px] ${active ? 'bg-emerald-50 text-emerald-600' : 'text-slate-400'}`}><Icon size={18} />{shortLabel}</button> })}</nav> }
+const bottomNavItems = navItems.filter(item => ['dashboard', 'transactions', 'receipts', 'online', 'reports'].includes(item.id))
+function BottomNav({ page, go }) { return <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-slate-200 bg-white/95 px-0.5 pb-[max(.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-10px_30px_rgba(15,23,42,.06)] backdrop-blur lg:hidden">{bottomNavItems.map(item => { const Icon = item.icon; const active = page === item.id; const shortLabel = item.id === 'transactions' ? 'İşlemler' : item.id === 'receipts' ? 'Fişler' : item.id === 'online' ? 'Online' : item.id === 'reports' ? 'Rapor' : item.label; return <button key={item.id} onClick={() => go(item.id)} className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-[9px] font-bold sm:text-[10px] ${active ? 'bg-emerald-50 text-emerald-600' : 'text-slate-400'}`}><Icon size={18} />{shortLabel}</button> })}</nav> }
 
 function PageHeading({ eyebrow, title, description, children }) { return <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="eyebrow">{eyebrow}</p><h1 className="mt-1.5 text-2xl font-extrabold tracking-tight text-slate-950 sm:text-3xl">{title}</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">{description}</p></div>{children}</div> }
 function Field({ label, children, className = '' }) { return <label className={className}><span className="field-label">{label}</span>{children}</label> }
