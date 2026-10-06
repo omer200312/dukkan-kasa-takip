@@ -11,6 +11,7 @@ React, Tailwind CSS ve Supabase ile hazırlanmış; masaüstü ve mobil cihazlar
 - Mobil kameradan veya galeriden fotoğraf yüklemeli, özel Supabase Storage alanında saklanan ortak fiş arşivi
 - Fişlerde tarih, firma, kategori, tutar ve not takibi; aylık filtreleme, arama, düzenleme ve silme
 - Supabase ile tüm kullanıcılarda ortak, anlık güncellenen veriler
+- Fiş fotoğraflarını seçili aya göre tek, düzenli PDF dosyası olarak indirme
 - CSV dışa aktarma, JSON yedekleme ve yedekten geri yükleme
 - Mobil cihazlarda kart görünümü ve alt menü
 

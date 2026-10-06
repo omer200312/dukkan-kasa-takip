@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Banknote, CalendarDays, Camera, ExternalLink, FileImage, ImagePlus,
-  Pencil, ReceiptText, Search, ShieldCheck, Trash2, Upload, X,
+  FileDown, Pencil, ReceiptText, Search, ShieldCheck, Trash2, Upload, X,
 } from 'lucide-react'
 import { supabase } from './supabase.js'
 
@@ -16,6 +16,130 @@ const localDate = () => dateKey(new Date())
 const displayDate = value => new Date(`${value}T00:00:00`).toLocaleDateString('tr-TR', { day: '2-digit', month: 'long', year: 'numeric' })
 const money = value => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(Number(value) || 0)
 const formatBytes = value => value >= 1024 * 1024 ? `${(value / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(value / 1024))} KB`
+
+const wrapCanvasText = (context, text, maxWidth) => {
+  const words = String(text || '').split(/\s+/).filter(Boolean)
+  if (!words.length) return []
+  const lines = []
+  let line = words.shift()
+  words.forEach(word => {
+    const candidate = `${line} ${word}`
+    if (context.measureText(candidate).width <= maxWidth) line = candidate
+    else { lines.push(line); line = word }
+  })
+  lines.push(line)
+  return lines
+}
+
+async function loadReceiptImage(url) {
+  const response = await fetch(url)
+  if (!response.ok) throw new Error('Fiş fotoğrafı indirilemedi.')
+  const blob = await response.blob()
+  const objectUrl = URL.createObjectURL(blob)
+  const image = new Image()
+  image.decoding = 'async'
+  image.src = objectUrl
+  try {
+    await image.decode()
+    return { image, release: () => URL.revokeObjectURL(objectUrl) }
+  } catch (error) {
+    URL.revokeObjectURL(objectUrl)
+    throw error
+  }
+}
+
+async function renderReceiptPage(item, periodLabel, pageNumber, pageCount) {
+  const canvas = document.createElement('canvas')
+  canvas.width = 1240
+  canvas.height = 1754
+  const context = canvas.getContext('2d')
+
+  context.fillStyle = '#f1f5f9'
+  context.fillRect(0, 0, canvas.width, canvas.height)
+  context.fillStyle = '#071226'
+  context.fillRect(0, 0, canvas.width, 210)
+  context.fillStyle = '#10b981'
+  context.fillRect(0, 200, canvas.width, 10)
+
+  context.fillStyle = '#34d399'
+  context.font = '700 22px Arial, sans-serif'
+  context.fillText('DÜKKAN KASA • FİŞ ARŞİVİ', 72, 68)
+  context.fillStyle = '#ffffff'
+  context.font = '800 44px Arial, sans-serif'
+  context.fillText(item.merchant || 'Fiş', 72, 128)
+  context.fillStyle = '#94a3b8'
+  context.font = '500 22px Arial, sans-serif'
+  context.fillText(`${periodLabel} • ${pageNumber}/${pageCount}`, 72, 170)
+
+  const cardX = 52
+  const cardY = 250
+  const cardW = canvas.width - 104
+  const cardH = 1370
+  context.fillStyle = '#ffffff'
+  context.fillRect(cardX, cardY, cardW, cardH)
+
+  const metaY = cardY + 58
+  const columns = [
+    ['TARİH', displayDate(item.date)],
+    ['KATEGORİ', item.category],
+    ['TUTAR', money(item.amount)],
+  ]
+  columns.forEach(([label, value], index) => {
+    const x = cardX + 46 + index * 355
+    context.fillStyle = '#94a3b8'
+    context.font = '700 16px Arial, sans-serif'
+    context.fillText(label, x, metaY)
+    context.fillStyle = index === 2 ? '#059669' : '#0f172a'
+    context.font = '800 25px Arial, sans-serif'
+    context.fillText(value, x, metaY + 38)
+  })
+
+  const imageX = cardX + 46
+  const imageY = cardY + 155
+  const imageW = cardW - 92
+  const imageH = 1035
+  context.fillStyle = '#e2e8f0'
+  context.fillRect(imageX, imageY, imageW, imageH)
+
+  let imageLoaded = false
+  if (item.signedUrl) {
+    try {
+      const loaded = await loadReceiptImage(item.signedUrl)
+      const scale = Math.min(imageW / loaded.image.naturalWidth, imageH / loaded.image.naturalHeight)
+      const width = loaded.image.naturalWidth * scale
+      const height = loaded.image.naturalHeight * scale
+      context.fillStyle = '#ffffff'
+      context.fillRect(imageX, imageY, imageW, imageH)
+      context.drawImage(loaded.image, imageX + (imageW - width) / 2, imageY + (imageH - height) / 2, width, height)
+      loaded.release()
+      imageLoaded = true
+    } catch (error) { console.error(error) }
+  }
+  if (!imageLoaded) {
+    context.fillStyle = '#64748b'
+    context.textAlign = 'center'
+    context.font = '700 28px Arial, sans-serif'
+    context.fillText('Fiş fotoğrafı PDF için açılamadı', imageX + imageW / 2, imageY + imageH / 2)
+    context.textAlign = 'left'
+  }
+
+  context.fillStyle = '#94a3b8'
+  context.font = '700 16px Arial, sans-serif'
+  context.fillText('AÇIKLAMA / NOT', imageX, imageY + imageH + 54)
+  context.fillStyle = '#334155'
+  context.font = '500 21px Arial, sans-serif'
+  const noteLines = wrapCanvasText(context, item.note || 'Not eklenmemiş.', imageW).slice(0, 3)
+  noteLines.forEach((line, index) => context.fillText(line, imageX, imageY + imageH + 88 + index * 31))
+
+  context.fillStyle = '#64748b'
+  context.font = '500 17px Arial, sans-serif'
+  context.fillText('Dükkan Kasa Takip tarafından oluşturulmuştur.', 58, 1698)
+  context.textAlign = 'right'
+  context.fillText(`${pageNumber} / ${pageCount}`, canvas.width - 58, 1698)
+  context.textAlign = 'left'
+
+  return { dataUrl: canvas.toDataURL('image/jpeg', 0.88), imageLoaded }
+}
 
 function extensionFor(file) {
   const byType = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/heic': 'heic', 'image/heif': 'heif' }
@@ -111,6 +235,7 @@ export default function Receipts({ loading, setLoading, notify }) {
   const [year, setYear] = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth() + 1)
   const [viewing, setViewing] = useState(null)
+  const [pdfGenerating, setPdfGenerating] = useState(false)
   const fileInputRef = useRef(null)
   const formRef = useRef(null)
 
@@ -269,6 +394,41 @@ export default function Receipts({ loading, setLoading, notify }) {
     } finally { setLoading(false) }
   }
 
+  const exportPdf = async () => {
+    if (!periodReceipts.length) return notify('PDF oluşturmak için bu ayda en az bir fiş olmalı.')
+    setPdfGenerating(true)
+    setLoading(true)
+    try {
+      const paths = periodReceipts.map(item => item.filePath).filter(Boolean)
+      const { data: signed, error: signedError } = await supabase.storage.from(BUCKET).createSignedUrls(paths, 15 * 60)
+      if (signedError) throw signedError
+      const signedByPath = new Map((signed || []).filter(item => item.signedUrl).map(item => [item.path, item.signedUrl]))
+      const exportItems = periodReceipts.map(item => ({ ...item, signedUrl: signedByPath.get(item.filePath) || item.signedUrl }))
+      const periodLabel = `${MONTHS[Number(month) - 1]} ${year}`
+      const { jsPDF } = await import('jspdf')
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true })
+      let missingImages = 0
+
+      for (let index = 0; index < exportItems.length; index += 1) {
+        if (index > 0) pdf.addPage('a4', 'portrait')
+        const page = await renderReceiptPage(exportItems[index], periodLabel, index + 1, exportItems.length)
+        if (!page.imageLoaded) missingImages += 1
+        pdf.addImage(page.dataUrl, 'JPEG', 0, 0, 210, 297, undefined, 'FAST')
+      }
+
+      pdf.save(`fis-arsivi-${year}-${String(month).padStart(2, '0')}.pdf`)
+      notify(missingImages
+        ? `PDF indirildi. ${missingImages} fotoğraf açılamadı; bilgileri PDF'e eklendi.`
+        : `${exportItems.length} fiş tek PDF dosyası olarak indirildi.`)
+    } catch (error) {
+      console.error(error)
+      notify(error.message || 'Fiş PDF dosyası oluşturulamadı.')
+    } finally {
+      setPdfGenerating(false)
+      setLoading(false)
+    }
+  }
+
   return <>
     <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div><p className="eyebrow">DİJİTAL ARŞİV</p><h1 className="mt-1.5 text-2xl font-extrabold tracking-tight text-slate-950 sm:text-3xl">Fiş Arşivi</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Fişin fotoğrafını çekin, tutarını ve kalemini kaydedin; tüm cihazlardan aynı arşive ulaşın.</p></div>
@@ -309,7 +469,7 @@ export default function Receipts({ loading, setLoading, notify }) {
     </section>
 
     <section className="panel mt-5 overflow-hidden">
-      <div className="flex flex-col gap-4 border-b border-slate-100 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6"><div><p className="eyebrow">KAYITLAR</p><h2 className="mt-1 text-lg font-extrabold text-slate-900">{MONTHS[Number(month) - 1]} {year} fişleri</h2></div><div className="relative w-full sm:w-72"><Search className="absolute left-3.5 top-3.5 text-slate-400" size={18} /><input className="field pl-11" type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Firma, kategori veya not ara" /></div></div>
+      <div className="flex flex-col gap-4 border-b border-slate-100 p-5 lg:flex-row lg:items-center lg:justify-between sm:p-6"><div><p className="eyebrow">KAYITLAR</p><h2 className="mt-1 text-lg font-extrabold text-slate-900">{MONTHS[Number(month) - 1]} {year} fişleri</h2><p className="mt-1 text-xs text-slate-400">Seçili ayın tüm fiş fotoğraflarını tek PDF dosyasında alın.</p></div><div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto"><div className="relative min-w-0 flex-1 sm:w-72"><Search className="absolute left-3.5 top-3.5 text-slate-400" size={18} /><input className="field pl-11" type="search" value={search} onChange={event => setSearch(event.target.value)} placeholder="Firma, kategori veya not ara" /></div><button type="button" onClick={exportPdf} disabled={!periodReceipts.length || pdfGenerating || loading} className="btn-secondary shrink-0 disabled:cursor-not-allowed disabled:opacity-50"><FileDown size={18} /> {pdfGenerating ? 'PDF Hazırlanıyor...' : 'Aylık PDF İndir'}</button></div></div>
       {visibleReceipts.length ? <div className="grid gap-4 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-3">{visibleReceipts.map(item => <ReceiptCard key={item.id} item={item} view={() => setViewing(item)} edit={() => startEdit(item)} remove={() => remove(item)} />)}</div> : <EmptyState />}
     </section>
 
